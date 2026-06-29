@@ -409,29 +409,24 @@ def brand_banner_file() -> BufferedInputFile:
     return BufferedInputFile(output.getvalue(), filename="marco-p2p-banner.png")
 
 
-def safe_sell_banner_file() -> BufferedInputFile:
-    width, height = 1100, 430
-    image = Image.new("RGB", (width, height), (8, 25, 18))
-    draw = ImageDraw.Draw(image)
-    for y in range(height):
-        green = int(40 + (y / height) * 115)
-        draw.line((0, y, width, y), fill=(10, green, 34))
+def safe_sell_banner_file() -> FSInputFile:
+    banner_path = Path(__file__).parent / "assets" / "banners" / "safe_sell_banner.jpg"
+    return FSInputFile(str(banner_path), filename="safe_sell_banner.jpg")
 
-    title_font = _captcha_font(70)
-    label_font = _captcha_font(34)
-    small_font = _captcha_font(28)
 
-    draw.rounded_rectangle((50, 42, width - 50, height - 42), radius=28, outline=(142, 255, 125), width=4)
-    draw.text((78, 82), "MARCO SAFE SELL", font=title_font, fill=(222, 255, 215))
-    draw.text((82, 178), "Instant Payments  •  Verified Funds  •  UPI | IMPS | CDM", font=label_font, fill=(255, 245, 185))
-    draw.text((82, 252), "Fund Purity & Safety - Guaranteed by MARCO", font=label_font, fill=(235, 255, 235))
-    draw.text((82, 318), "Each penny you receive is 100% authentic & Guaranteed!", font=small_font, fill=(205, 240, 215))
-    draw.ellipse((865, 102, 1015, 252), fill=(235, 255, 240), outline=(120, 250, 145), width=8)
-    draw.rounded_rectangle((905, 235, 976, 342), radius=18, fill=(235, 255, 240), outline=(120, 250, 145), width=5)
-    draw.text((900, 128), "₹", font=title_font, fill=(12, 110, 44))
-    output = io.BytesIO()
-    image.save(output, format="PNG")
-    return BufferedInputFile(output.getvalue(), filename="marco-safe-sell-banner.png")
+def welcome_banner_file() -> FSInputFile:
+    banner_path = Path(__file__).parent / "assets" / "banners" / "welcome_banner.jpg"
+    return FSInputFile(str(banner_path), filename="welcome_banner.jpg")
+
+
+def post_ad_banner_file() -> FSInputFile:
+    banner_path = Path(__file__).parent / "assets" / "banners" / "post_ad_banner.jpg"
+    return FSInputFile(str(banner_path), filename="post_ad_banner.jpg")
+
+
+def stats_banner_file() -> FSInputFile:
+    banner_path = Path(__file__).parent / "assets" / "banners" / "stats_banner.jpg"
+    return FSInputFile(str(banner_path), filename="stats_banner.jpg")
 
 
 def public_username(user: User) -> str:

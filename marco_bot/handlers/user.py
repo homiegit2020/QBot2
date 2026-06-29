@@ -32,6 +32,7 @@ from ..services import (
     get_rate_tiers,
     parse_decimal,
     pop_state,
+    post_ad_banner_file,
     public_username,
     random_captcha,
     random_code,
@@ -45,9 +46,11 @@ from ..services import (
     send_tracked_menu_photo,
     session_data,
     set_state,
+    stats_banner_file,
     telegram_username,
     transition,
     user_is_in_required_groups,
+    welcome_banner_file,
 )
 
 router = Router()
@@ -330,14 +333,14 @@ def is_locked_entry(text: str) -> bool:
 
 async def send_welcome(target: Message, user: User) -> None:
     async with session_scope() as session:
-        await send_brand_message(
+        await send_tracked_menu_photo(
+            session,
             target.bot,
+            user.user_id,
             target.chat.id,
+            welcome_banner_file(),
             msg.WELCOME,
-            settings(),
             reply_markup=kb.persistent_menu(user),
-            session=session,
-            user_id=user.user_id,
             parse_mode=ParseMode.HTML,
         )
 
@@ -375,7 +378,7 @@ async def enter_post_ad(message: Message, user: User) -> None:
             await send_captcha(message, session, user)
             return
         await set_state(session, user.user_id, states.AD_SIDE_SELECT, data={}, stack=[states.IDLE])
-        await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.OBJECTIVE, reply_markup=kb.objective(), parse_mode=ParseMode.HTML)
+        await send_tracked_menu_photo(session, message.bot, user.user_id, message.chat.id, post_ad_banner_file(), msg.OBJECTIVE, reply_markup=kb.objective(), parse_mode=ParseMode.HTML)
 
 
 async def send_captcha(message: Message, session, user: User, reset_attempts: bool = True) -> None:
@@ -829,6 +832,17 @@ async def show_global_stats(message: Message) -> None:
             session.add(stats)
             await session.flush()
         await reset_today_if_needed(session, stats, settings().timezone)
+        
+        # Send stats banner photo first
+        await send_tracked_menu_photo(
+            session,
+            message.bot,
+            message.from_user.id,
+            message.chat.id,
+            stats_banner_file(),
+            msg.loading_animation(10),
+            parse_mode=ParseMode.HTML,
+        )
         
         # Send initial loading message
         sent_msg = await send_tracked_menu_message(
