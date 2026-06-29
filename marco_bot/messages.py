@@ -57,7 +57,15 @@ COIN_SELECT = f"{premium_emoji('5778311685638984859', '🪙')} Choose Your Coin:
 
 
 def chain_select(coin: str) -> str:
-    return f"<tg-emoji emoji-id='5411246291416013236'>🔗</tg-emoji> Select Chain for {coin}"
+    coin_emoji = {
+        'USDT': premium_emoji('5359437015752401733', '📱'),
+        'BTC': premium_emoji('5359584650958226302', '📱'),
+        'ETH': premium_emoji('5359321266383766546', '📱'),
+        'SOL': premium_emoji('4915861533679944766', '🔥'),
+        'USDC': premium_emoji('5240086656349913841', '🤑'),
+    }
+    extra_emoji = coin_emoji.get(coin, '')
+    return f"<tg-emoji emoji-id='5411246291416013236'>🔗</tg-emoji> Select Chain for {coin} {extra_emoji}"
 
 
 FUNDS_SOURCE = "<tg-emoji emoji-id='5348503265967355284'>💰</tg-emoji> Choose payment source"
