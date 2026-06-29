@@ -135,11 +135,11 @@ def exchange_rates(payment_mode: str, tiers: list[tuple[Decimal, Decimal | None,
             band = f"${min_usd:.0f}+"
         else:
             band = f"${min_usd:.0f}-${max_usd:.0f}"
-        lines.append(f"▪ {band} : {rate:.1f}₹")
+        lines.append(f"{premium_emoji('5935795874251674052', '⚡️')} {band} : {rate:.1f}₹")
     tier_text = "\n".join(lines)
-    return f"""Important - You may get funds in multiple shots, if the order is bigger than 25K₹⚡ (100% Safe)
+    return f"""{premium_emoji('5960714428394507968', '👁')} Important - You may get funds in multiple {premium_emoji('5897958754267174109', '💰')} shots, if the order is bigger than 25K₹ {premium_emoji('6019295596173596341', '👁')} (100% Safe {premium_emoji('5769403330761593044', '👛')})
 
-EXCHANGE RATES FOR {payment_mode} 👇
+EXCHANGE RATES FOR {payment_mode} {premium_emoji('6339166816006312740', '👇')}
 
 {tier_text}
 
