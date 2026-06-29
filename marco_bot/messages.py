@@ -104,11 +104,7 @@ Ref: {ref_code}
 Use {BOT_USERNAME} for SAFE-SELL ⚡"""
 
 
-SAFE_SELL_LANDING = """Welcome to MARCO P2P Bot 👋⚡️
-
-SAFE SELL — A trusted platform to Sell Crypto Instantly and receive SAFE & GUARANTEED INR ₹ directly.
-
-Choose an option below to get started 👇"""
+SAFE_SELL_LANDING = WELCOME
 
 SAFE_SELL_BANNER = """✔ Instant Payments ⚡
 ✔ Verified & Guaranteed Funds
