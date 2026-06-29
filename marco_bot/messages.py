@@ -22,9 +22,9 @@ Escrow : {ESCROW_BOT_USERNAME}
 Chat : {ESCROW_CHAT_USERNAME}
 Updates : {UPDATES_USERNAME}"""
 
-WELCOME = """⭐ Welcome To MARCO P2P Bot 🔥, where you can Sell & Buy Crypto Easily 💧
+WELCOME = """⭐ <tg-emoji emoji-id="5958376256788502078">🙏</tg-emoji> <tg-emoji emoji-id="5220166546491459639">🔥</tg-emoji> 💧
 
-What is your objective?"""
+<tg-emoji emoji-id="5408892168301466942">⚡</tg-emoji>"""
 
 GROUP_GATE = """❌ Access Denied 🔒
 
