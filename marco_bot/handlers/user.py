@@ -23,6 +23,7 @@ from ..services import (
     as_money,
     captcha_file,
     clear_flow,
+    delete_active_menu_message,
     deposit_address,
     format_remaining,
     get_or_create_session,
@@ -39,6 +40,8 @@ from ..services import (
     safe_sell_banner_file,
     save_captcha,
     send_brand_message,
+    send_tracked_menu_message,
+    send_tracked_menu_photo,
     session_data,
     set_state,
     telegram_username,
@@ -69,7 +72,15 @@ async def command_start(message: Message) -> None:
         user, created = await get_or_create_user(session, message.from_user)
         await clear_flow(session, user.user_id)
         if created:
-            await send_brand_message(message.bot, message.chat.id, msg.INFO_CARD, settings(), reply_markup=kb.start_bot())
+            await send_brand_message(
+                message.bot,
+                message.chat.id,
+                msg.INFO_CARD,
+                settings(),
+                reply_markup=kb.start_bot(),
+                session=session,
+                user_id=user.user_id,
+            )
         else:
             await send_welcome(message, user)
 
@@ -118,7 +129,7 @@ async def proof_photo(message: Message) -> None:
         user, _ = await get_or_create_user(session, message.from_user)
         bot_session = await get_or_create_session(session, user.user_id)
         if bot_session.state not in {states.EXPRESS_AWAITING_SCREENSHOT, states.WALLET_AWAITING_SCREENSHOT}:
-            await message.answer("Please use the bot buttons to start a payment flow.", reply_markup=kb.persistent_menu(user))
+            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, "Please use the bot buttons to start a payment flow.", reply_markup=kb.persistent_menu(user))
             return
 
         data = session_data(bot_session)
@@ -141,7 +152,7 @@ async def proof_photo(message: Message) -> None:
         await clear_flow(session, user.user_id)
         await session.flush()
         await notify_admin_review(message, user, tx)
-        await message.answer(msg.SCREENSHOT_SUBMITTED, reply_markup=kb.persistent_menu(user))
+        await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.SCREENSHOT_SUBMITTED, reply_markup=kb.persistent_menu(user))
 
 
 @router.message(F.text)
@@ -287,20 +298,24 @@ def is_locked_entry(text: str) -> bool:
 
 
 async def send_welcome(target: Message, user: User) -> None:
-    await send_brand_message(
-        target.bot,
-        target.chat.id,
-        msg.WELCOME,
-        settings(),
-        reply_markup=kb.persistent_menu(user),
-    )
+    async with session_scope() as session:
+        await send_brand_message(
+            target.bot,
+            target.chat.id,
+            msg.WELCOME,
+            settings(),
+            reply_markup=kb.persistent_menu(user),
+            session=session,
+            user_id=user.user_id,
+        )
 
 
 async def show_locked_for_text(message: Message, text: str, user: User) -> None:
-    if text == c.MY_STATS_BUTTON:
-        await message.answer(msg.LOCKED_STATS, reply_markup=kb.persistent_menu(user))
-    else:
-        await message.answer(msg.LOCKED_ACTION, reply_markup=kb.persistent_menu(user))
+    async with session_scope() as session:
+        if text == c.MY_STATS_BUTTON:
+            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.LOCKED_STATS, reply_markup=kb.persistent_menu(user))
+        else:
+            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.LOCKED_ACTION, reply_markup=kb.persistent_menu(user))
 
 
 async def enter_post_ad(message: Message, user: User) -> None:
@@ -308,23 +323,27 @@ async def enter_post_ad(message: Message, user: User) -> None:
         user = await session.get(User, user.user_id)
         assert user is not None
         if user.post_ad_cooldown_until and user.post_ad_cooldown_until > datetime.utcnow():
-            await message.answer(
+            await send_tracked_menu_message(
+                session,
+                message.bot,
+                user.user_id,
+                message.chat.id,
                 f"POST AD is on cooldown. Try again in {format_remaining(user.post_ad_cooldown_until)}.",
                 reply_markup=kb.persistent_menu(user),
             )
             return
         if user.is_locked:
-            await message.answer(msg.LOCKED_ACTION, reply_markup=kb.persistent_menu(user))
+            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.LOCKED_ACTION, reply_markup=kb.persistent_menu(user))
             return
         if not user.is_group_verified:
             if not await user_is_in_required_groups(message.bot, session, user.user_id):
                 groups = await required_groups(session)
-                await message.answer(msg.GROUP_GATE, reply_markup=kb.group_gate(groups))
+                await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.GROUP_GATE, reply_markup=kb.group_gate(groups))
                 return
             await send_captcha(message, session, user)
             return
         await set_state(session, user.user_id, states.AD_SIDE_SELECT, data={}, stack=[states.IDLE])
-        await message.answer(msg.OBJECTIVE, reply_markup=kb.objective(), parse_mode=ParseMode.HTML)
+        await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.OBJECTIVE, reply_markup=kb.objective(), parse_mode=ParseMode.HTML)
 
 
 async def send_captcha(message: Message, session, user: User, reset_attempts: bool = True) -> None:
@@ -332,7 +351,7 @@ async def send_captcha(message: Message, session, user: User, reset_attempts: bo
     await save_captcha(session, user.user_id, code, reset_attempts=reset_attempts)
     await set_state(session, user.user_id, states.CAPTCHA, data={}, stack=[states.IDLE])
     first_name = user.first_name or "Friend"
-    await message.answer_photo(photo=captcha_file(code), caption=msg.captcha_caption(first_name), reply_markup=kb.captcha_options(code))
+    await send_tracked_menu_photo(session, message.bot, user.user_id, message.chat.id, captcha_file(code), msg.captcha_caption(first_name), reply_markup=kb.captcha_options(code))
 
 
 async def handle_captcha_answer(message: Message, user: User, text: str) -> None:
@@ -348,17 +367,17 @@ async def handle_captcha_answer(message: Message, user: User, text: str) -> None
             user.is_group_verified = True
             await session.execute(delete(CaptchaAttempt).where(CaptchaAttempt.user_id == user.user_id))
             await clear_flow(session, user.user_id)
-            await message.answer("✅ Captcha solved correctly!")
-            await message.answer(msg.captcha_accepted(user.first_name or "Friend"), reply_markup=kb.persistent_menu(user))
+            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, "✅ Captcha solved correctly!")
+            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.captcha_accepted(user.first_name or "Friend"), reply_markup=kb.persistent_menu(user))
             return
 
         attempt.attempts += 1
         if attempt.attempts >= 5:
             await session.execute(delete(CaptchaAttempt).where(CaptchaAttempt.user_id == user.user_id))
             await clear_flow(session, user.user_id)
-            await message.answer("Captcha failed too many times. Please click POST AD again to retry.")
+            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, "Captcha failed too many times. Please click POST AD again to retry.")
             return
-        await message.answer("❌ Incorrect captcha. Please try the new captcha.")
+        await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, "❌ Incorrect captcha. Please try the new captcha.")
         await send_captcha(message, session, user, reset_attempts=False)
 
 
@@ -367,7 +386,7 @@ async def set_ad_side(callback: CallbackQuery, user: User, side: str) -> None:
         await transition(session, user.user_id, states.AD_COIN_SELECT, {"side": side}, push=True)
         await delete_callback_message(callback)
         await callback.answer()
-        await callback.message.answer(msg.COIN_SELECT, reply_markup=kb.coin_select(), parse_mode=ParseMode.HTML)
+        await send_tracked_menu_message(session, callback.message.bot, user.user_id, callback.message.chat.id, msg.COIN_SELECT, reply_markup=kb.coin_select(), parse_mode=ParseMode.HTML)
 
 
 async def set_ad_coin(callback: CallbackQuery, user: User, coin: str) -> None:
@@ -379,7 +398,7 @@ async def set_ad_coin(callback: CallbackQuery, user: User, coin: str) -> None:
         bot_session.data_json = json.dumps(data)
         await delete_callback_message(callback)
         await callback.answer()
-        await callback.message.answer(msg.chain_select(coin), reply_markup=kb.chains(coin))
+        await send_tracked_menu_message(session, callback.message.bot, user.user_id, callback.message.chat.id, msg.chain_select(coin), reply_markup=kb.chains(coin))
 
 
 async def set_ad_chain(callback: CallbackQuery, user: User, chain: str) -> None:
@@ -387,7 +406,7 @@ async def set_ad_chain(callback: CallbackQuery, user: User, chain: str) -> None:
         await transition(session, user.user_id, states.AD_FUNDS_SOURCE, {"chain": chain}, push=True)
         await delete_callback_message(callback)
         await callback.answer()
-        await callback.message.answer(msg.FUNDS_SOURCE, reply_markup=kb.funds_source())
+        await send_tracked_menu_message(session, callback.message.bot, user.user_id, callback.message.chat.id, msg.FUNDS_SOURCE, reply_markup=kb.funds_source())
 
 
 async def set_ad_source(callback: CallbackQuery, user: User, source: str) -> None:
@@ -396,7 +415,7 @@ async def set_ad_source(callback: CallbackQuery, user: User, source: str) -> Non
         await transition(session, user.user_id, states.AD_RATE_INPUT, {"funds_source": source}, push=True)
         await delete_callback_message(callback)
         await callback.answer()
-        await callback.message.answer(msg.rate_input(source, band[0], band[1]), reply_markup=kb.back())
+        await send_tracked_menu_message(session, callback.message.bot, user.user_id, callback.message.chat.id, msg.rate_input(source, band[0], band[1]), reply_markup=kb.back())
 
 
 async def handle_ad_rate(message: Message, user: User, text: str) -> None:
@@ -407,20 +426,21 @@ async def handle_ad_rate(message: Message, user: User, text: str) -> None:
         source = data.get("funds_source", "Legit")
         band = c.AD_RATE_BANDS.get(source, (94.0, 102.0))
         if rate is None or rate < Decimal(str(band[0])) or rate > Decimal(str(band[1])):
-            await message.answer(msg.rate_input(source, band[0], band[1]), reply_markup=kb.back())
+            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.rate_input(source, band[0], band[1]), reply_markup=kb.back())
             return
         await transition(session, user.user_id, states.AD_AMOUNT_INPUT, {"rate": str(rate)}, push=True)
-        await message.answer(msg.AMOUNT_INPUT, reply_markup=kb.quick_amount("ad"))
+        await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.AMOUNT_INPUT, reply_markup=kb.quick_amount("ad"))
 
 
 async def handle_ad_amount(message: Message, user: User, text: str) -> None:
     amount = parse_decimal(text)
     if amount is None or amount <= 0:
-        await message.answer("Enter a valid amount greater than 0.", reply_markup=kb.quick_amount("ad"))
+        async with session_scope() as session:
+            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, "Enter a valid amount greater than 0.", reply_markup=kb.quick_amount("ad"))
         return
     async with session_scope() as session:
         await transition(session, user.user_id, states.AD_PAYMENT_METHOD, {"amount": str(amount)}, push=True)
-        await message.answer(msg.PAYMENT_METHOD, reply_markup=kb.payment_methods())
+        await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.PAYMENT_METHOD, reply_markup=kb.payment_methods())
 
 
 async def handle_quick_amount(callback: CallbackQuery, user: User, prefix: str, value: str) -> None:
@@ -436,7 +456,7 @@ async def handle_quick_amount(callback: CallbackQuery, user: User, prefix: str, 
             await transition(session, user.user_id, states.AD_PAYMENT_METHOD, {"amount": str(amount)}, push=True)
             await delete_callback_message(callback)
             await callback.answer()
-            await callback.message.answer(msg.PAYMENT_METHOD, reply_markup=kb.payment_methods())
+            await send_tracked_menu_message(session, callback.message.bot, user.user_id, callback.message.chat.id, msg.PAYMENT_METHOD, reply_markup=kb.payment_methods())
     else:
         await process_express_amount(callback.message, user, amount)
         await delete_callback_message(callback)
@@ -449,7 +469,7 @@ async def set_ad_method(callback: CallbackQuery, user: User, method: str) -> Non
         data = session_data(bot_session)
         await delete_callback_message(callback)
         await callback.answer()
-        await callback.message.answer(msg.ad_text(data, public_username(user), preview=True), reply_markup=kb.ad_preview())
+        await send_tracked_menu_message(session, callback.message.bot, user.user_id, callback.message.chat.id, msg.ad_text(data, public_username(user), preview=True), reply_markup=kb.ad_preview())
 
 
 async def revise_ad(callback: CallbackQuery, user: User) -> None:
@@ -460,7 +480,7 @@ async def revise_ad(callback: CallbackQuery, user: User) -> None:
         await set_state(session, user.user_id, states.AD_COIN_SELECT, data={"side": side}, stack=[states.AD_SIDE_SELECT])
         await delete_callback_message(callback)
         await callback.answer()
-        await callback.message.answer(msg.COIN_SELECT, reply_markup=kb.coin_select(), parse_mode=ParseMode.HTML)
+        await send_tracked_menu_message(session, callback.message.bot, user.user_id, callback.message.chat.id, msg.COIN_SELECT, reply_markup=kb.coin_select(), parse_mode=ParseMode.HTML)
 
 
 async def publish_ad(callback: CallbackQuery, user: User) -> None:
@@ -494,7 +514,7 @@ async def publish_ad(callback: CallbackQuery, user: User) -> None:
         await post_public_ad(callback, ad, data, public_username(user))
         await delete_callback_message(callback)
         await callback.answer()
-        await callback.message.answer(msg.ad_published(ref_code), reply_markup=kb.persistent_menu(user))
+        await send_tracked_menu_message(session, callback.message.bot, user.user_id, callback.message.chat.id, msg.ad_published(ref_code), reply_markup=kb.persistent_menu(user))
 
 
 async def post_public_ad(callback: CallbackQuery, ad: Ad, data: dict, username: str) -> None:
@@ -521,12 +541,16 @@ async def enter_safe_sell(message: Message, user: User) -> None:
     async with session_scope() as session:
         user = await session.get(User, user.user_id)
         if user and user.is_locked:
-            await message.answer(msg.LOCKED_ACTION, reply_markup=kb.persistent_menu(user))
+            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.LOCKED_ACTION, reply_markup=kb.persistent_menu(user))
             return
         await set_state(session, user.user_id, states.EXPRESS_LANDING, data={}, stack=[states.IDLE])
-        await message.answer_photo(
-            photo=safe_sell_banner_file(),
-            caption=msg.SAFE_SELL_LANDING,
+        await send_tracked_menu_photo(
+            session,
+            message.bot,
+            user.user_id,
+            message.chat.id,
+            safe_sell_banner_file(),
+            msg.SAFE_SELL_LANDING,
             reply_markup=kb.express_landing(user.wallet_balance, settings().support_url),
         )
 
@@ -538,7 +562,7 @@ async def show_payment_modes(callback: CallbackQuery, user: User) -> None:
         await transition(session, user.user_id, states.EXPRESS_PAYMENT_MODE, {}, push=True)
         await delete_callback_message(callback)
         await callback.answer()
-        await callback.message.answer(msg.PAYMENT_MODE_SELECT, reply_markup=kb.payment_modes(modes))
+        await send_tracked_menu_message(session, callback.message.bot, user.user_id, callback.message.chat.id, msg.PAYMENT_MODE_SELECT, reply_markup=kb.payment_modes(modes))
 
 
 async def set_express_mode(callback: CallbackQuery, user: User, payment_mode: str) -> None:
@@ -551,13 +575,14 @@ async def set_express_mode(callback: CallbackQuery, user: User, payment_mode: st
         await transition(session, user.user_id, states.EXPRESS_AMOUNT_INPUT, {"payment_mode": payment_mode, "tx_type": "express_sell"}, push=True)
         await delete_callback_message(callback)
         await callback.answer()
-        await callback.message.answer(msg.exchange_rates(payment_mode, tiers), reply_markup=kb.quick_amount("express"))
+        await send_tracked_menu_message(session, callback.message.bot, user.user_id, callback.message.chat.id, msg.exchange_rates(payment_mode, tiers), reply_markup=kb.quick_amount("express"))
 
 
 async def handle_express_amount(message: Message, user: User, text: str) -> None:
     amount = parse_decimal(text)
     if amount is None or amount <= 0:
-        await message.answer("Enter a valid amount greater than 0.", reply_markup=kb.quick_amount("express"))
+        async with session_scope() as session:
+            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, "Enter a valid amount greater than 0.", reply_markup=kb.quick_amount("express"))
         return
     await process_express_amount(message, user, amount)
 
@@ -570,7 +595,7 @@ async def process_express_amount(message: Message, user: User, amount: Decimal) 
         rate = await rate_for_amount(session, payment_mode, amount)
         if rate is None:
             tiers = await get_rate_tiers(session, payment_mode)
-            await message.answer(msg.exchange_rates(payment_mode, tiers), reply_markup=kb.quick_amount("express"))
+            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.exchange_rates(payment_mode, tiers), reply_markup=kb.quick_amount("express"))
             return
         amount_inr = as_money(amount * rate)
         await transition(
@@ -580,7 +605,7 @@ async def process_express_amount(message: Message, user: User, amount: Decimal) 
             {"amount_usd": str(amount), "amount_inr": str(amount_inr), "rate": str(rate)},
             push=True,
         )
-        await message.answer(msg.inr_preview(amount_inr), reply_markup=kb.token_select("express"))
+        await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.inr_preview(amount_inr), reply_markup=kb.token_select("express"))
 
 
 async def set_express_token(callback: CallbackQuery, user: User, token: str) -> None:
@@ -588,7 +613,7 @@ async def set_express_token(callback: CallbackQuery, user: User, token: str) -> 
         await transition(session, user.user_id, states.EXPRESS_CHAIN_SELECT, {"token": token}, push=True)
         await delete_callback_message(callback)
         await callback.answer()
-        await callback.message.answer(msg.express_chain_select(token), reply_markup=kb.express_chains(token, "express"))
+        await send_tracked_menu_message(session, callback.message.bot, user.user_id, callback.message.chat.id, msg.express_chain_select(token), reply_markup=kb.express_chains(token, "express"))
 
 
 async def set_express_chain(callback: CallbackQuery, user: User, chain: str) -> None:
@@ -600,7 +625,7 @@ async def set_express_chain(callback: CallbackQuery, user: User, chain: str) -> 
         await transition(session, user.user_id, states.EXPRESS_DEPOSIT_ADDRESS, {"chain": chain, "deposit_address": address}, push=True)
         await delete_callback_message(callback)
         await callback.answer()
-        await callback.message.answer(msg.deposit_instructions(token, chain, address), reply_markup=kb.check_payment())
+        await send_tracked_menu_message(session, callback.message.bot, user.user_id, callback.message.chat.id, msg.deposit_instructions(token, chain, address), reply_markup=kb.check_payment())
 
 
 async def request_screenshot(callback: CallbackQuery, user: User) -> None:
@@ -615,17 +640,17 @@ async def request_screenshot(callback: CallbackQuery, user: User) -> None:
             return
         await delete_callback_message(callback)
         await callback.answer()
-        await callback.message.answer(msg.SCREENSHOT_PROMPT)
+        await send_tracked_menu_message(session, callback.message.bot, user.user_id, callback.message.chat.id, msg.SCREENSHOT_PROMPT)
 
 
 async def open_wallet(message: Message, user: User) -> None:
     async with session_scope() as session:
         user = await session.get(User, user.user_id)
         if user and user.is_locked:
-            await message.answer(msg.LOCKED_ACTION, reply_markup=kb.persistent_menu(user))
+            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.LOCKED_ACTION, reply_markup=kb.persistent_menu(user))
             return
         await set_state(session, user.user_id, states.WALLET_MENU, data={}, stack=[states.IDLE])
-        await message.answer(msg.wallet(user.wallet_balance), reply_markup=kb.wallet_menu())
+        await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.wallet(user.wallet_balance), reply_markup=kb.wallet_menu())
 
 
 async def wallet_add(callback: CallbackQuery, user: User) -> None:
@@ -633,13 +658,14 @@ async def wallet_add(callback: CallbackQuery, user: User) -> None:
         await transition(session, user.user_id, states.WALLET_ADD_AMOUNT, {"tx_type": "wallet_deposit", "payment_mode": "wallet"}, push=True)
         await delete_callback_message(callback)
         await callback.answer()
-        await callback.message.answer(msg.WALLET_ADD_AMOUNT, reply_markup=kb.back())
+        await send_tracked_menu_message(session, callback.message.bot, user.user_id, callback.message.chat.id, msg.WALLET_ADD_AMOUNT, reply_markup=kb.back())
 
 
 async def handle_wallet_deposit_amount(message: Message, user: User, text: str) -> None:
     amount = parse_decimal(text)
     if amount is None or amount <= 0:
-        await message.answer("Enter a valid amount greater than 0.", reply_markup=kb.back())
+        async with session_scope() as session:
+            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, "Enter a valid amount greater than 0.", reply_markup=kb.back())
         return
     async with session_scope() as session:
         await transition(
@@ -649,7 +675,7 @@ async def handle_wallet_deposit_amount(message: Message, user: User, text: str) 
             {"amount_usd": str(amount), "amount_inr": "0"},
             push=True,
         )
-        await message.answer("Select Your Crypto Token 👇", reply_markup=kb.token_select("wallet"))
+        await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, "Select Your Crypto Token 👇", reply_markup=kb.token_select("wallet"))
 
 
 async def set_wallet_token(callback: CallbackQuery, user: User, token: str) -> None:
@@ -657,7 +683,7 @@ async def set_wallet_token(callback: CallbackQuery, user: User, token: str) -> N
         await transition(session, user.user_id, states.WALLET_ADD_CHAIN, {"token": token}, push=True)
         await delete_callback_message(callback)
         await callback.answer()
-        await callback.message.answer(msg.express_chain_select(token), reply_markup=kb.express_chains(token, "wallet"))
+        await send_tracked_menu_message(session, callback.message.bot, user.user_id, callback.message.chat.id, msg.express_chain_select(token), reply_markup=kb.express_chains(token, "wallet"))
 
 
 async def set_wallet_chain(callback: CallbackQuery, user: User, chain: str) -> None:
@@ -675,7 +701,7 @@ async def set_wallet_chain(callback: CallbackQuery, user: User, chain: str) -> N
         )
         await delete_callback_message(callback)
         await callback.answer()
-        await callback.message.answer(msg.deposit_instructions(token, chain, address), reply_markup=kb.check_payment())
+        await send_tracked_menu_message(session, callback.message.bot, user.user_id, callback.message.chat.id, msg.deposit_instructions(token, chain, address), reply_markup=kb.check_payment())
 
 
 async def wallet_withdraw(callback: CallbackQuery, user: User) -> None:
@@ -683,7 +709,7 @@ async def wallet_withdraw(callback: CallbackQuery, user: User) -> None:
         await transition(session, user.user_id, states.WALLET_WITHDRAW_AMOUNT, {}, push=True)
         await delete_callback_message(callback)
         await callback.answer()
-        await callback.message.answer(msg.WITHDRAW_AMOUNT, reply_markup=kb.back())
+        await send_tracked_menu_message(session, callback.message.bot, user.user_id, callback.message.chat.id, msg.WITHDRAW_AMOUNT, reply_markup=kb.back())
 
 
 async def handle_withdraw_amount(message: Message, user: User, text: str) -> None:
@@ -693,10 +719,10 @@ async def handle_withdraw_amount(message: Message, user: User, text: str) -> Non
         if not user:
             return
         if amount is None or amount <= 0 or amount > user.wallet_balance:
-            await message.answer(f"Enter an amount up to your available balance: ${user.wallet_balance:.2f}", reply_markup=kb.back())
+            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, f"Enter an amount up to your available balance: ${user.wallet_balance:.2f}", reply_markup=kb.back())
             return
         await transition(session, user.user_id, states.WALLET_WITHDRAW_DEST, {"withdraw_amount": str(amount)}, push=True)
-        await message.answer(msg.WITHDRAW_DESTINATION, reply_markup=kb.back())
+        await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.WITHDRAW_DESTINATION, reply_markup=kb.back())
 
 
 async def handle_withdraw_destination(message: Message, user: User, text: str) -> None:
@@ -706,7 +732,7 @@ async def handle_withdraw_destination(message: Message, user: User, text: str) -
         data = session_data(bot_session)
         amount = Decimal(str(data.get("withdraw_amount", "0")))
         if not user or amount <= 0 or amount > user.wallet_balance:
-            await message.answer("Withdrawal amount is no longer available.", reply_markup=kb.persistent_menu(user))
+            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, "Withdrawal amount is no longer available.", reply_markup=kb.persistent_menu(user))
             await clear_flow(session, user.user_id)
             return
         tx = Transaction(
@@ -722,7 +748,7 @@ async def handle_withdraw_destination(message: Message, user: User, text: str) -
         await clear_flow(session, user.user_id)
         await session.flush()
         await notify_admin_review(message, user, tx)
-        await message.answer(msg.withdraw_queued(tx.tx_id), reply_markup=kb.persistent_menu(user))
+        await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.withdraw_queued(tx.tx_id), reply_markup=kb.persistent_menu(user))
 
 
 async def delete_callback_message(callback: CallbackQuery) -> None:
@@ -740,10 +766,14 @@ async def show_my_stats(message: Message, user: User) -> None:
         if not user:
             return
         if user.is_locked:
-            await message.answer(msg.LOCKED_STATS, reply_markup=kb.persistent_menu(user))
+            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.LOCKED_STATS, reply_markup=kb.persistent_menu(user))
             return
         member_since = user.first_seen_at.strftime("%d %b, %Y")
-        await message.answer(
+        await send_tracked_menu_message(
+            session,
+            message.bot,
+            user.user_id,
+            message.chat.id,
             msg.my_stats(
                 user.username or str(user.user_id),
                 member_since,
@@ -763,8 +793,12 @@ async def show_global_stats(message: Message) -> None:
             session.add(stats)
             await session.flush()
         await reset_today_if_needed(session, stats, settings().timezone)
-        await message.answer(
-            msg.global_stats(stats.total_safe_sold_amount, stats.today_safe_sold_amount, stats.total_deals_completed)
+        await send_tracked_menu_message(
+            session,
+            message.bot,
+            message.from_user.id if message.from_user else 0,
+            message.chat.id,
+            msg.global_stats(stats.total_safe_sold_amount, stats.today_safe_sold_amount, stats.total_deals_completed),
         )
 
 
@@ -776,64 +810,54 @@ async def render_state(message: Message, user: User, state: str) -> None:
         if state in {states.IDLE, states.OBJECTIVE_SELECT}:
             await send_welcome(message, user)
         elif state == states.AD_SIDE_SELECT:
-            await message.answer(msg.OBJECTIVE, reply_markup=kb.objective(), parse_mode=ParseMode.HTML)
+            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.OBJECTIVE, reply_markup=kb.objective(), parse_mode=ParseMode.HTML)
         elif state == states.AD_COIN_SELECT:
-            await message.answer(msg.COIN_SELECT, reply_markup=kb.coin_select(), parse_mode=ParseMode.HTML)
+            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.COIN_SELECT, reply_markup=kb.coin_select(), parse_mode=ParseMode.HTML)
         elif state == states.AD_CHAIN_SELECT:
-            await message.answer(msg.chain_select(data.get("coin", "USDT")), reply_markup=kb.chains(data.get("coin", "USDT")))
+            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.chain_select(data.get("coin", "USDT")), reply_markup=kb.chains(data.get("coin", "USDT")))
         elif state == states.AD_FUNDS_SOURCE:
-            await message.answer(msg.FUNDS_SOURCE, reply_markup=kb.funds_source())
+            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.FUNDS_SOURCE, reply_markup=kb.funds_source())
         elif state == states.AD_RATE_INPUT:
             source = data.get("funds_source", "Legit")
             band = c.AD_RATE_BANDS.get(source, (94.0, 102.0))
-            await message.answer(msg.rate_input(source, band[0], band[1]), reply_markup=kb.back())
+            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.rate_input(source, band[0], band[1]), reply_markup=kb.back())
         elif state == states.AD_AMOUNT_INPUT:
-            await message.answer(msg.AMOUNT_INPUT, reply_markup=kb.quick_amount("ad"))
+            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.AMOUNT_INPUT, reply_markup=kb.quick_amount("ad"))
         elif state == states.AD_PAYMENT_METHOD:
-            await message.answer(msg.PAYMENT_METHOD, reply_markup=kb.payment_methods())
+            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.PAYMENT_METHOD, reply_markup=kb.payment_methods())
         elif state == states.AD_PREVIEW:
-            await message.answer(msg.ad_text(data, public_username(user), preview=True), reply_markup=kb.ad_preview())
+            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.ad_text(data, public_username(user), preview=True), reply_markup=kb.ad_preview())
         elif state == states.EXPRESS_LANDING:
-            await message.answer_photo(
-                photo=safe_sell_banner_file(),
-                caption=msg.SAFE_SELL_LANDING,
-                reply_markup=kb.express_landing(user.wallet_balance, settings().support_url),
-            )
+            await send_tracked_menu_photo(session, message.bot, user.user_id, message.chat.id, safe_sell_banner_file(), msg.SAFE_SELL_LANDING, reply_markup=kb.express_landing(user.wallet_balance, settings().support_url))
         elif state == states.EXPRESS_PAYMENT_MODE:
             result = await session.execute(select(PaymentMode))
-            await message.answer(msg.PAYMENT_MODE_SELECT, reply_markup=kb.payment_modes(list(result.scalars().all())))
+            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.PAYMENT_MODE_SELECT, reply_markup=kb.payment_modes(list(result.scalars().all())))
         elif state == states.EXPRESS_AMOUNT_INPUT:
             payment_mode = data.get("payment_mode", "UPI")
             tiers = await get_rate_tiers(session, payment_mode)
-            await message.answer(msg.exchange_rates(payment_mode, tiers), reply_markup=kb.quick_amount("express"))
+            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.exchange_rates(payment_mode, tiers), reply_markup=kb.quick_amount("express"))
         elif state == states.EXPRESS_TOKEN_SELECT:
-            await message.answer(msg.inr_preview(Decimal(str(data.get("amount_inr", "0")))), reply_markup=kb.token_select("express"))
+            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.inr_preview(Decimal(str(data.get("amount_inr", "0")))), reply_markup=kb.token_select("express"))
         elif state == states.EXPRESS_CHAIN_SELECT:
             token = data.get("token", "USDT")
-            await message.answer(msg.express_chain_select(token), reply_markup=kb.express_chains(token, "express"))
+            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.express_chain_select(token), reply_markup=kb.express_chains(token, "express"))
         elif state == states.EXPRESS_DEPOSIT_ADDRESS:
-            await message.answer(
-                msg.deposit_instructions(data.get("token", "USDT"), data.get("chain", "BEP20"), data.get("deposit_address", "")),
-                reply_markup=kb.check_payment(),
-            )
+            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.deposit_instructions(data.get("token", "USDT"), data.get("chain", "BEP20"), data.get("deposit_address", "")), reply_markup=kb.check_payment())
         elif state == states.WALLET_MENU:
-            await message.answer(msg.wallet(user.wallet_balance), reply_markup=kb.wallet_menu())
+            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.wallet(user.wallet_balance), reply_markup=kb.wallet_menu())
         elif state == states.WALLET_ADD_AMOUNT:
-            await message.answer(msg.WALLET_ADD_AMOUNT, reply_markup=kb.back())
+            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.WALLET_ADD_AMOUNT, reply_markup=kb.back())
         elif state == states.WALLET_ADD_TOKEN:
-            await message.answer("Select Your Crypto Token 👇", reply_markup=kb.token_select("wallet"))
+            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, "Select Your Crypto Token 👇", reply_markup=kb.token_select("wallet"))
         elif state == states.WALLET_ADD_CHAIN:
             token = data.get("token", "USDT")
-            await message.answer(msg.express_chain_select(token), reply_markup=kb.express_chains(token, "wallet"))
+            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.express_chain_select(token), reply_markup=kb.express_chains(token, "wallet"))
         elif state == states.WALLET_DEPOSIT_ADDRESS:
-            await message.answer(
-                msg.deposit_instructions(data.get("token", "USDT"), data.get("chain", "BEP20"), data.get("deposit_address", "")),
-                reply_markup=kb.check_payment(),
-            )
+            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.deposit_instructions(data.get("token", "USDT"), data.get("chain", "BEP20"), data.get("deposit_address", "")), reply_markup=kb.check_payment())
         elif state == states.WALLET_WITHDRAW_AMOUNT:
-            await message.answer(msg.WITHDRAW_AMOUNT, reply_markup=kb.back())
+            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.WITHDRAW_AMOUNT, reply_markup=kb.back())
         elif state == states.WALLET_WITHDRAW_DEST:
-            await message.answer(msg.WITHDRAW_DESTINATION, reply_markup=kb.back())
+            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.WITHDRAW_DESTINATION, reply_markup=kb.back())
         else:
             await send_welcome(message, user)
 

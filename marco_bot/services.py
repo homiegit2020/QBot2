@@ -89,6 +89,16 @@ def session_stack(bot_session: UserSession) -> list[str]:
     return json.loads(bot_session.stack_json or "[]")
 
 
+def active_menu_message_id(bot_session: UserSession) -> int | None:
+    data = session_data(bot_session)
+    value = data.get("active_menu_message_id")
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str) and value.isdigit():
+        return int(value)
+    return None
+
+
 async def set_state(
     session: AsyncSession,
     user_id: int,
@@ -127,6 +137,27 @@ async def transition(
 
 async def clear_flow(session: AsyncSession, user_id: int) -> UserSession:
     return await set_state(session, user_id, states.IDLE, data={}, stack=[])
+
+
+async def clear_active_menu(session: AsyncSession, user_id: int) -> None:
+    bot_session = await get_or_create_session(session, user_id)
+    data = session_data(bot_session)
+    data.pop("active_menu_message_id", None)
+    bot_session.data_json = json.dumps(data)
+
+
+async def delete_active_menu_message(session: AsyncSession, bot: Bot, user_id: int) -> None:
+    bot_session = await get_or_create_session(session, user_id)
+    message_id = active_menu_message_id(bot_session)
+    if not message_id:
+        return
+    data = session_data(bot_session)
+    data.pop("active_menu_message_id", None)
+    bot_session.data_json = json.dumps(data)
+    try:
+        await bot.delete_message(user_id, message_id)
+    except (TelegramBadRequest, TelegramForbiddenError):
+        pass
 
 
 async def pop_state(session: AsyncSession, user_id: int) -> UserSession:
@@ -264,20 +295,79 @@ async def send_brand_message(
     text: str,
     settings: Settings,
     reply_markup=None,
+    session: AsyncSession | None = None,
+    user_id: int | None = None,
 ) -> Message:
+    if session is not None and user_id is not None:
+        await delete_active_menu_message(session, bot, user_id)
     if settings.banner_image_path:
-        return await bot.send_photo(
+        message = await bot.send_photo(
             chat_id=chat_id,
             photo=FSInputFile(settings.banner_image_path),
             caption=text,
             reply_markup=reply_markup,
         )
-    return await bot.send_photo(
+    else:
+        message = await bot.send_photo(
+            chat_id=chat_id,
+            photo=brand_banner_file(),
+            caption=text,
+            reply_markup=reply_markup,
+        )
+    if session is not None and user_id is not None:
+        bot_session = await get_or_create_session(session, user_id)
+        data = session_data(bot_session)
+        data["active_menu_message_id"] = message.message_id
+        bot_session.data_json = json.dumps(data)
+    return message
+
+
+async def send_tracked_menu_photo(
+    session: AsyncSession,
+    bot: Bot,
+    user_id: int,
+    chat_id: int | str,
+    photo: BufferedInputFile | FSInputFile,
+    caption: str,
+    reply_markup=None,
+    parse_mode: str | None = None,
+) -> Message:
+    await delete_active_menu_message(session, bot, user_id)
+    message = await bot.send_photo(
         chat_id=chat_id,
-        photo=brand_banner_file(),
-        caption=text,
+        photo=photo,
+        caption=caption,
         reply_markup=reply_markup,
+        parse_mode=parse_mode,
     )
+    bot_session = await get_or_create_session(session, user_id)
+    data = session_data(bot_session)
+    data["active_menu_message_id"] = message.message_id
+    bot_session.data_json = json.dumps(data)
+    return message
+
+
+async def send_tracked_menu_message(
+    session: AsyncSession,
+    bot: Bot,
+    user_id: int,
+    chat_id: int | str,
+    text: str,
+    reply_markup=None,
+    parse_mode: str | None = None,
+) -> Message:
+    await delete_active_menu_message(session, bot, user_id)
+    message = await bot.send_message(
+        chat_id=chat_id,
+        text=text,
+        reply_markup=reply_markup,
+        parse_mode=parse_mode,
+    )
+    bot_session = await get_or_create_session(session, user_id)
+    data = session_data(bot_session)
+    data["active_menu_message_id"] = message.message_id
+    bot_session.data_json = json.dumps(data)
+    return message
 
 
 def captcha_file(code: str) -> BufferedInputFile:
