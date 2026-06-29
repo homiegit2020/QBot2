@@ -10,7 +10,7 @@ from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 from aiogram.enums import ParseMode
 from aiogram.filters import Command, CommandStart
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 
 from .. import constants as c
 from .. import keyboards as kb
@@ -85,29 +85,25 @@ async def command_start(message: Message) -> None:
 async def command_stats(message: Message) -> None:
     if not message.from_user:
         return
-    
-    # Extract username from command if provided
-    text = message.text.strip()
+    text = (message.text or "").strip()
     parts = text.split(maxsplit=1)
-    
+
     if len(parts) > 1:
-        # Username provided: /stats @username or /stats username
-        username_input = parts[1].lstrip('@')
-        
+        username_input = parts[1].lstrip("@").strip().lower()
+        if not username_input:
+            await show_global_stats(message)
+            return
+
         async with session_scope() as session:
-            # Try to find user by username
-            stmt = select(User).where(User.username == username_input)
+            stmt = select(User).where(func.lower(User.username) == username_input)
             result = await session.execute(stmt)
             target_user = result.scalar_one_or_none()
-            
+
             if target_user:
-                # Show the requested user's stats
                 await show_my_stats(message, target_user)
             else:
-                # User not found
-                await message.answer(f"❌ User '@{username_input}' not found or has no username set.", show_alert=True)
+                await message.answer(f"❌ User '@{username_input}' not found or has no username set.")
     else:
-        # No username provided: show global stats
         await show_global_stats(message)
 
 
