@@ -200,7 +200,7 @@ async def user_is_in_required_groups(bot: Bot, session: AsyncSession, user_id: i
         try:
             member = await bot.get_chat_member(group.group_id, user_id)
         except (TelegramBadRequest, TelegramForbiddenError):
-            return False
+            continue
         if member.status in {"left", "kicked"}:
             return False
     return True
