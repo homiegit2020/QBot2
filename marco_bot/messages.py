@@ -200,6 +200,15 @@ def my_stats(username: str, member_since: str, ads: int, sells: int, volume: Dec
 Use {BOT_USERNAME} for SAFE-SELL <tg-emoji emoji-id='5408892168301466942'>🔥</tg-emoji>"""
 
 
+def loading_animation(percentage: int) -> str:
+    """Generate animated loading bar for global stats"""
+    filled = percentage // 10
+    empty = 10 - filled
+    bar = "█" * filled + "░" * empty
+    status = "✅ Statistics Loaded" if percentage == 100 else ""
+    return f"""<tg-emoji emoji-id='5913702317667913862'>📊</tg-emoji> Loading Global Statistics...{bar} {percentage}% {status}"""
+
+
 def global_stats(total: Decimal, today: Decimal, deals: int) -> str:
     return f"""<tg-emoji emoji-id='5913702317667913862'>📊</tg-emoji> Global Stats Of {BOT_USERNAME}
 

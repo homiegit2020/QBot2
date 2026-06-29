@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -793,6 +794,9 @@ async def show_my_stats(message: Message, user: User) -> None:
 
 
 async def show_global_stats(message: Message) -> None:
+    if not message.from_user:
+        return
+    
     async with session_scope() as session:
         stats = await session.get(GlobalStats, 1)
         if not stats:
@@ -800,13 +804,44 @@ async def show_global_stats(message: Message) -> None:
             session.add(stats)
             await session.flush()
         await reset_today_if_needed(session, stats, settings().timezone)
-        await send_tracked_menu_message(
+        
+        # Send initial loading message
+        sent_msg = await send_tracked_menu_message(
             session,
             message.bot,
-            message.from_user.id if message.from_user else 0,
+            message.from_user.id,
             message.chat.id,
-            msg.global_stats(stats.total_safe_sold_amount, stats.today_safe_sold_amount, stats.total_deals_completed),
+            msg.loading_animation(10),
+            parse_mode=ParseMode.HTML,
         )
+        
+        # Animate loading bar: 10% → 30% → 50% → 70% → 90% → 100%
+        for percentage in [30, 50, 70, 90, 100]:
+            await asyncio.sleep(0.5)
+            try:
+                await message.bot.edit_message_text(
+                    chat_id=message.chat.id,
+                    message_id=sent_msg.message_id,
+                    text=msg.loading_animation(percentage),
+                    parse_mode=ParseMode.HTML,
+                )
+            except (TelegramBadRequest, TelegramForbiddenError):
+                pass
+        
+        # Wait a moment before showing final stats
+        await asyncio.sleep(0.3)
+        
+        # Show final statistics
+        final_text = msg.global_stats(stats.total_safe_sold_amount, stats.today_safe_sold_amount, stats.total_deals_completed)
+        try:
+            await message.bot.edit_message_text(
+                chat_id=message.chat.id,
+                message_id=sent_msg.message_id,
+                text=final_text,
+                parse_mode=ParseMode.HTML,
+            )
+        except (TelegramBadRequest, TelegramForbiddenError):
+            pass
 
 
 async def render_state(message: Message, user: User, state: str) -> None:
