@@ -72,15 +72,7 @@ async def command_start(message: Message) -> None:
         user, created = await get_or_create_user(session, message.from_user)
         await clear_flow(session, user.user_id)
         if created:
-            await send_brand_message(
-                message.bot,
-                message.chat.id,
-                msg.INFO_CARD,
-                settings(),
-                reply_markup=kb.start_bot(),
-                session=session,
-                user_id=user.user_id,
-            )
+            await send_welcome(message, user)
         else:
             await send_welcome(message, user)
 
