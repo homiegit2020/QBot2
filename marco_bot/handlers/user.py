@@ -6,6 +6,7 @@ from decimal import Decimal
 
 from aiogram import F, Router
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
+from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 from sqlalchemy import delete, select
@@ -295,7 +296,7 @@ async def enter_post_ad(message: Message, user: User) -> None:
             await send_captcha(message, session, user)
             return
         await set_state(session, user.user_id, states.AD_SIDE_SELECT, data={}, stack=[states.IDLE])
-        await message.answer(msg.OBJECTIVE, reply_markup=kb.objective())
+        await message.answer(msg.OBJECTIVE, reply_markup=kb.objective(), parse_mode=ParseMode.HTML)
 
 
 async def send_captcha(message: Message, session, user: User, reset_attempts: bool = True) -> None:
@@ -337,7 +338,7 @@ async def set_ad_side(callback: CallbackQuery, user: User, side: str) -> None:
     async with session_scope() as session:
         await transition(session, user.user_id, states.AD_COIN_SELECT, {"side": side}, push=True)
         await callback.answer()
-        await callback.message.answer(msg.COIN_SELECT, reply_markup=kb.coin_select())
+        await callback.message.answer(msg.COIN_SELECT, reply_markup=kb.coin_select(), parse_mode=ParseMode.HTML)
 
 
 async def set_ad_coin(callback: CallbackQuery, user: User, coin: str) -> None:
@@ -423,7 +424,7 @@ async def revise_ad(callback: CallbackQuery, user: User) -> None:
         side = data.get("side", "sell")
         await set_state(session, user.user_id, states.AD_COIN_SELECT, data={"side": side}, stack=[states.AD_SIDE_SELECT])
         await callback.answer()
-        await callback.message.answer(msg.COIN_SELECT, reply_markup=kb.coin_select())
+        await callback.message.answer(msg.COIN_SELECT, reply_markup=kb.coin_select(), parse_mode=ParseMode.HTML)
 
 
 async def publish_ad(callback: CallbackQuery, user: User) -> None:
@@ -720,9 +721,9 @@ async def render_state(message: Message, user: User, state: str) -> None:
         if state in {states.IDLE, states.OBJECTIVE_SELECT}:
             await send_welcome(message, user)
         elif state == states.AD_SIDE_SELECT:
-            await message.answer(msg.OBJECTIVE, reply_markup=kb.objective())
+            await message.answer(msg.OBJECTIVE, reply_markup=kb.objective(), parse_mode=ParseMode.HTML)
         elif state == states.AD_COIN_SELECT:
-            await message.answer(msg.COIN_SELECT, reply_markup=kb.coin_select())
+            await message.answer(msg.COIN_SELECT, reply_markup=kb.coin_select(), parse_mode=ParseMode.HTML)
         elif state == states.AD_CHAIN_SELECT:
             await message.answer(msg.chain_select(data.get("coin", "USDT")), reply_markup=kb.chains(data.get("coin", "USDT")))
         elif state == states.AD_FUNDS_SOURCE:

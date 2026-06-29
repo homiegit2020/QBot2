@@ -48,8 +48,12 @@ Welcome To MARCO P2P 🔥
 Use /start to sell your crypto right away! ⚡"""
 
 
-OBJECTIVE = "⚙️ What would you like to do ?"
-COIN_SELECT = "🪙 Choose Your Coin ⚡"
+def premium_emoji(emoji_id: str, fallback: str) -> str:
+    return f'<tg-emoji emoji-id="{emoji_id}">{fallback}</tg-emoji>'
+
+
+OBJECTIVE = f"{premium_emoji('5951665890079544884', '⚙️')} What would you like to do?"
+COIN_SELECT = f"{premium_emoji('5778311685638984859', '🪙')} Choose Your Coin:"
 
 
 def chain_select(coin: str) -> str:
