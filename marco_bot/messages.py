@@ -125,7 +125,7 @@ SAFE_SELL_BANNER = """✔ Instant Payments ⚡
 Fund Purity & Safety — Guaranteed by MARCO 🔥
 Each penny you receive is 100% authentic & Guaranteed!"""
 
-PAYMENT_MODE_SELECT = "Sell your crypto in multiple methods 👇⚡"
+PAYMENT_MODE_SELECT = f"Sell your crypto in multiple methods {premium_emoji('6339166816006312740', '👇')}⚡"
 
 
 def exchange_rates(payment_mode: str, tiers: list[tuple[Decimal, Decimal | None, Decimal]]) -> str:
