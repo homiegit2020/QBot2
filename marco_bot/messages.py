@@ -147,9 +147,9 @@ Enter Amount in $ you want to sell :"""
 
 
 def inr_preview(amount_inr: Decimal) -> str:
-    return f"""You will receive approx: ₹{amount_inr:.2f} 💰
+    return f"""You will receive approx: ₹{amount_inr:.2f} {premium_emoji('5197434882321567830', '💵')}
 
-Select Your Crypto Token 👇"""
+Select Your Crypto {premium_emoji('5242625806655570503', '🤑')} Token {premium_emoji('6339166816006312740', '👇')}"""
 
 
 def express_chain_select(token: str) -> str:
