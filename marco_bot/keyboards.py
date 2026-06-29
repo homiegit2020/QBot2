@@ -172,7 +172,7 @@ def ad_preview() -> InlineKeyboardMarkup:
 def express_landing(balance: Decimal, support_url: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="SELL CRYPTO ⚡", callback_data="express:sell")],
+            [InlineKeyboardButton(text="SELL CRYPTO ⚡️", callback_data="express:sell")],
             [InlineKeyboardButton(text="Saved Payment Methods", callback_data="express:saved_methods")],
             [InlineKeyboardButton(text=f"💰 Balance: ${balance:.2f}", callback_data="wallet:open")],
             [InlineKeyboardButton(text="Support", url=support_url)],
@@ -214,8 +214,8 @@ def check_payment() -> InlineKeyboardMarkup:
 def wallet_menu() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="Add Funds +", callback_data="wallet:add")],
-            [InlineKeyboardButton(text="Withdraw Funds 🤑", callback_data="wallet:withdraw")],
+            [InlineKeyboardButton(text="Add Funds ➕💵", callback_data="wallet:add")],
+            [InlineKeyboardButton(text="Withdraw Funds 💸", callback_data="wallet:withdraw")],
             [InlineKeyboardButton(text=c.BACK_PLAIN_BUTTON, callback_data="nav:menu")],
         ]
     )
