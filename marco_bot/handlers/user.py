@@ -7,7 +7,7 @@ from decimal import Decimal
 from aiogram import F, Router
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 from aiogram.enums import ParseMode
-from aiogram.filters import CommandStart
+from aiogram.filters import Command, CommandStart
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 from sqlalchemy import delete, select
 
@@ -74,6 +74,30 @@ async def command_start(message: Message) -> None:
             await send_welcome(message, user)
 
 
+@router.message(Command("stats"))
+async def command_stats(message: Message) -> None:
+    await show_global_stats(message)
+
+
+@router.message(Command("p2pstats"))
+async def command_p2pstats(message: Message) -> None:
+    if not message.from_user:
+        return
+    async with session_scope() as session:
+        user, _ = await get_or_create_user(session, message.from_user)
+    await show_my_stats(message, user)
+
+
+@router.message(Command("cancel"))
+async def command_cancel(message: Message) -> None:
+    if not message.from_user:
+        return
+    async with session_scope() as session:
+        user, _ = await get_or_create_user(session, message.from_user)
+        await clear_flow(session, user.user_id)
+    await send_welcome(message, user)
+
+
 @router.callback_query(F.data == "start_bot")
 async def start_bot_callback(callback: CallbackQuery) -> None:
     if not callback.from_user or not callback.message:
@@ -81,6 +105,7 @@ async def start_bot_callback(callback: CallbackQuery) -> None:
     async with session_scope() as session:
         user, _ = await get_or_create_user(session, callback.from_user)
         await clear_flow(session, user.user_id)
+        await delete_callback_message(callback)
         await callback.answer()
         await send_welcome(callback.message, user)
 
@@ -183,6 +208,7 @@ async def callbacks(callback: CallbackQuery) -> None:
     if data == "nav:menu":
         async with session_scope() as session:
             await clear_flow(session, user.user_id)
+        await delete_callback_message(callback)
         await callback.answer()
         await send_welcome(callback.message, user)
         return
@@ -190,6 +216,7 @@ async def callbacks(callback: CallbackQuery) -> None:
         async with session_scope() as session:
             bot_session = await pop_state(session, user.user_id)
             state = bot_session.state
+        await delete_callback_message(callback)
         await callback.answer()
         await render_state(callback.message, user, state)
         return
@@ -232,6 +259,7 @@ async def callbacks(callback: CallbackQuery) -> None:
     elif data == "payment:check":
         await request_screenshot(callback, user)
     elif data == "wallet:open":
+        await delete_callback_message(callback)
         await open_wallet(callback.message, user)
         await callback.answer()
     elif data == "wallet:add":
@@ -337,6 +365,7 @@ async def handle_captcha_answer(message: Message, user: User, text: str) -> None
 async def set_ad_side(callback: CallbackQuery, user: User, side: str) -> None:
     async with session_scope() as session:
         await transition(session, user.user_id, states.AD_COIN_SELECT, {"side": side}, push=True)
+        await delete_callback_message(callback)
         await callback.answer()
         await callback.message.answer(msg.COIN_SELECT, reply_markup=kb.coin_select(), parse_mode=ParseMode.HTML)
 
@@ -348,6 +377,7 @@ async def set_ad_coin(callback: CallbackQuery, user: User, coin: str) -> None:
         for key in ["chain", "funds_source", "rate", "amount", "payment_method"]:
             data.pop(key, None)
         bot_session.data_json = json.dumps(data)
+        await delete_callback_message(callback)
         await callback.answer()
         await callback.message.answer(msg.chain_select(coin), reply_markup=kb.chains(coin))
 
@@ -355,6 +385,7 @@ async def set_ad_coin(callback: CallbackQuery, user: User, coin: str) -> None:
 async def set_ad_chain(callback: CallbackQuery, user: User, chain: str) -> None:
     async with session_scope() as session:
         await transition(session, user.user_id, states.AD_FUNDS_SOURCE, {"chain": chain}, push=True)
+        await delete_callback_message(callback)
         await callback.answer()
         await callback.message.answer(msg.FUNDS_SOURCE, reply_markup=kb.funds_source())
 
@@ -363,6 +394,7 @@ async def set_ad_source(callback: CallbackQuery, user: User, source: str) -> Non
     async with session_scope() as session:
         band = c.AD_RATE_BANDS.get(source, (94.0, 102.0))
         await transition(session, user.user_id, states.AD_RATE_INPUT, {"funds_source": source}, push=True)
+        await delete_callback_message(callback)
         await callback.answer()
         await callback.message.answer(msg.rate_input(source, band[0], band[1]), reply_markup=kb.back())
 
@@ -402,10 +434,12 @@ async def handle_quick_amount(callback: CallbackQuery, user: User, prefix: str, 
     if prefix == "ad":
         async with session_scope() as session:
             await transition(session, user.user_id, states.AD_PAYMENT_METHOD, {"amount": str(amount)}, push=True)
+            await delete_callback_message(callback)
             await callback.answer()
             await callback.message.answer(msg.PAYMENT_METHOD, reply_markup=kb.payment_methods())
     else:
         await process_express_amount(callback.message, user, amount)
+        await delete_callback_message(callback)
         await callback.answer()
 
 
@@ -413,6 +447,7 @@ async def set_ad_method(callback: CallbackQuery, user: User, method: str) -> Non
     async with session_scope() as session:
         bot_session = await transition(session, user.user_id, states.AD_PREVIEW, {"payment_method": method}, push=True)
         data = session_data(bot_session)
+        await delete_callback_message(callback)
         await callback.answer()
         await callback.message.answer(msg.ad_text(data, public_username(user), preview=True), reply_markup=kb.ad_preview())
 
@@ -423,6 +458,7 @@ async def revise_ad(callback: CallbackQuery, user: User) -> None:
         data = session_data(bot_session)
         side = data.get("side", "sell")
         await set_state(session, user.user_id, states.AD_COIN_SELECT, data={"side": side}, stack=[states.AD_SIDE_SELECT])
+        await delete_callback_message(callback)
         await callback.answer()
         await callback.message.answer(msg.COIN_SELECT, reply_markup=kb.coin_select(), parse_mode=ParseMode.HTML)
 
@@ -456,6 +492,7 @@ async def publish_ad(callback: CallbackQuery, user: User) -> None:
         await session.flush()
 
         await post_public_ad(callback, ad, data, public_username(user))
+        await delete_callback_message(callback)
         await callback.answer()
         await callback.message.answer(msg.ad_published(ref_code), reply_markup=kb.persistent_menu(user))
 
@@ -499,6 +536,7 @@ async def show_payment_modes(callback: CallbackQuery, user: User) -> None:
         result = await session.execute(select(PaymentMode))
         modes = list(result.scalars().all())
         await transition(session, user.user_id, states.EXPRESS_PAYMENT_MODE, {}, push=True)
+        await delete_callback_message(callback)
         await callback.answer()
         await callback.message.answer(msg.PAYMENT_MODE_SELECT, reply_markup=kb.payment_modes(modes))
 
@@ -511,6 +549,7 @@ async def set_express_mode(callback: CallbackQuery, user: User, payment_mode: st
             return
         tiers = await get_rate_tiers(session, payment_mode)
         await transition(session, user.user_id, states.EXPRESS_AMOUNT_INPUT, {"payment_mode": payment_mode, "tx_type": "express_sell"}, push=True)
+        await delete_callback_message(callback)
         await callback.answer()
         await callback.message.answer(msg.exchange_rates(payment_mode, tiers), reply_markup=kb.quick_amount("express"))
 
@@ -547,6 +586,7 @@ async def process_express_amount(message: Message, user: User, amount: Decimal) 
 async def set_express_token(callback: CallbackQuery, user: User, token: str) -> None:
     async with session_scope() as session:
         await transition(session, user.user_id, states.EXPRESS_CHAIN_SELECT, {"token": token}, push=True)
+        await delete_callback_message(callback)
         await callback.answer()
         await callback.message.answer(msg.express_chain_select(token), reply_markup=kb.express_chains(token, "express"))
 
@@ -558,6 +598,7 @@ async def set_express_chain(callback: CallbackQuery, user: User, chain: str) -> 
         token = data.get("token", "USDT")
         address = deposit_address(settings(), token, chain)
         await transition(session, user.user_id, states.EXPRESS_DEPOSIT_ADDRESS, {"chain": chain, "deposit_address": address}, push=True)
+        await delete_callback_message(callback)
         await callback.answer()
         await callback.message.answer(msg.deposit_instructions(token, chain, address), reply_markup=kb.check_payment())
 
@@ -572,6 +613,7 @@ async def request_screenshot(callback: CallbackQuery, user: User) -> None:
         else:
             await callback.answer("No payment is awaiting proof.", show_alert=True)
             return
+        await delete_callback_message(callback)
         await callback.answer()
         await callback.message.answer(msg.SCREENSHOT_PROMPT)
 
@@ -589,6 +631,7 @@ async def open_wallet(message: Message, user: User) -> None:
 async def wallet_add(callback: CallbackQuery, user: User) -> None:
     async with session_scope() as session:
         await transition(session, user.user_id, states.WALLET_ADD_AMOUNT, {"tx_type": "wallet_deposit", "payment_mode": "wallet"}, push=True)
+        await delete_callback_message(callback)
         await callback.answer()
         await callback.message.answer(msg.WALLET_ADD_AMOUNT, reply_markup=kb.back())
 
@@ -612,6 +655,7 @@ async def handle_wallet_deposit_amount(message: Message, user: User, text: str) 
 async def set_wallet_token(callback: CallbackQuery, user: User, token: str) -> None:
     async with session_scope() as session:
         await transition(session, user.user_id, states.WALLET_ADD_CHAIN, {"token": token}, push=True)
+        await delete_callback_message(callback)
         await callback.answer()
         await callback.message.answer(msg.express_chain_select(token), reply_markup=kb.express_chains(token, "wallet"))
 
@@ -629,6 +673,7 @@ async def set_wallet_chain(callback: CallbackQuery, user: User, chain: str) -> N
             {"chain": chain, "deposit_address": address},
             push=True,
         )
+        await delete_callback_message(callback)
         await callback.answer()
         await callback.message.answer(msg.deposit_instructions(token, chain, address), reply_markup=kb.check_payment())
 
@@ -636,6 +681,7 @@ async def set_wallet_chain(callback: CallbackQuery, user: User, chain: str) -> N
 async def wallet_withdraw(callback: CallbackQuery, user: User) -> None:
     async with session_scope() as session:
         await transition(session, user.user_id, states.WALLET_WITHDRAW_AMOUNT, {}, push=True)
+        await delete_callback_message(callback)
         await callback.answer()
         await callback.message.answer(msg.WITHDRAW_AMOUNT, reply_markup=kb.back())
 
@@ -677,6 +723,15 @@ async def handle_withdraw_destination(message: Message, user: User, text: str) -
         await session.flush()
         await notify_admin_review(message, user, tx)
         await message.answer(msg.withdraw_queued(tx.tx_id), reply_markup=kb.persistent_menu(user))
+
+
+async def delete_callback_message(callback: CallbackQuery) -> None:
+    if not callback.message:
+        return
+    try:
+        await callback.message.delete()
+    except (TelegramBadRequest, TelegramForbiddenError):
+        pass
 
 
 async def show_my_stats(message: Message, user: User) -> None:

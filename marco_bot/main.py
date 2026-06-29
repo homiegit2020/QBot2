@@ -4,6 +4,7 @@ import asyncio
 import logging
 
 from aiogram import Bot, Dispatcher
+from aiogram.types import BotCommand
 
 from .config import load_settings
 from .db import configure_database, init_db
@@ -20,6 +21,14 @@ async def main() -> None:
     user.configure(settings)
 
     bot = Bot(token=settings.bot_token)
+    await bot.set_my_commands(
+        [
+            BotCommand(command="start", description="Open the bot"),
+            BotCommand(command="stats", description="View global stats"),
+            BotCommand(command="p2pstats", description="View your P2P stats"),
+            BotCommand(command="cancel", description="Cancel the current flow"),
+        ]
+    )
     dispatcher = Dispatcher()
     dispatcher.include_router(admin.router)
     dispatcher.include_router(user.router)
