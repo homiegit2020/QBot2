@@ -80,7 +80,32 @@ async def command_start(message: Message) -> None:
 
 @router.message(Command("stats"))
 async def command_stats(message: Message) -> None:
-    await show_global_stats(message)
+    if not message.from_user:
+        return
+    
+    # Extract username from command if provided
+    text = message.text.strip()
+    parts = text.split(maxsplit=1)
+    
+    if len(parts) > 1:
+        # Username provided: /stats @username or /stats username
+        username_input = parts[1].lstrip('@')
+        
+        async with session_scope() as session:
+            # Try to find user by username
+            stmt = select(User).where(User.username == username_input)
+            result = await session.execute(stmt)
+            target_user = result.scalar_one_or_none()
+            
+            if target_user:
+                # Show the requested user's stats
+                await show_my_stats(message, target_user)
+            else:
+                # User not found
+                await message.answer(f"❌ User '@{username_input}' not found or has no username set.", show_alert=True)
+    else:
+        # No username provided: show global stats
+        await show_global_stats(message)
 
 
 @router.message(Command("p2pstats"))
