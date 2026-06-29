@@ -297,6 +297,7 @@ async def send_brand_message(
     reply_markup=None,
     session: AsyncSession | None = None,
     user_id: int | None = None,
+    parse_mode: str | None = None,
 ) -> Message:
     if session is not None and user_id is not None:
         await delete_active_menu_message(session, bot, user_id)
@@ -306,6 +307,7 @@ async def send_brand_message(
             photo=FSInputFile(settings.banner_image_path),
             caption=text,
             reply_markup=reply_markup,
+            parse_mode=parse_mode,
         )
     else:
         message = await bot.send_photo(
@@ -313,6 +315,7 @@ async def send_brand_message(
             photo=brand_banner_file(),
             caption=text,
             reply_markup=reply_markup,
+            parse_mode=parse_mode,
         )
     if session is not None and user_id is not None:
         bot_session = await get_or_create_session(session, user_id)

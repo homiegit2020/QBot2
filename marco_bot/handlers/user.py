@@ -320,6 +320,7 @@ async def send_welcome(target: Message, user: User) -> None:
             reply_markup=kb.persistent_menu(user),
             session=session,
             user_id=user.user_id,
+            parse_mode=ParseMode.HTML,
         )
 
 
