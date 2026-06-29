@@ -57,37 +57,40 @@ COIN_SELECT = f"{premium_emoji('5778311685638984859', '🪙')} Choose Your Coin:
 
 
 def chain_select(coin: str) -> str:
-    return f"🧬 Select Chain for {coin} ⚡"
+    return f"<tg-emoji emoji-id='5411246291416013236'>🔗</tg-emoji> Select Chain for {coin}"
 
 
-FUNDS_SOURCE = "💰 Choose payment source ⚡"
+FUNDS_SOURCE = "<tg-emoji emoji-id='5348503265967355284'>💰</tg-emoji> Choose payment source"
 
 
 def rate_input(category: str, minimum: float, maximum: float) -> str:
-    return f"""💳 Set exchange rate ⚡
+    return f"""<tg-emoji emoji-id='5927169041595634481'>💳</tg-emoji> Set exchange rate
 Category: {category}
 Enter a number between {minimum:.1f} and {maximum:.1f}:"""
 
 
 AMOUNT_INPUT = "▽ Enter amount / quantity ⚡\n(e.g 10-100-1000)"
-PAYMENT_METHOD = "💼 Pick a payment method ⚡"
+PAYMENT_METHOD = "<tg-emoji emoji-id='5967389567781703494'>💼</tg-emoji> Pick a payment method"
 
 
 def ad_text(data: dict, username: str, preview: bool = True) -> str:
     side = data.get("side", "sell")
-    side_line = "🔴 #Selling" if side == "sell" else "🟢 #Buying"
+    if side == "sell":
+        side_line = "<tg-emoji emoji-id='5972265777296838427'>💵</tg-emoji> #Selling"
+    else:
+        side_line = "<tg-emoji emoji-id='5852871561983299073'>🛒</tg-emoji> #Buying"
     header = "🔍 ADVERTISEMENT PREVIEW\n\n" if preview else ""
     return f"""{header}{side_line}
 
-➡ Crypto: {data.get("coin")}
-💲 Quantity: {data.get("amount")}$
-🔗 Chain: {data.get("chain")}
-🛡 Funds Source: {data.get("funds_source")}
-💰 Rate: {data.get("rate")}
-📇 Payment Method: {data.get("payment_method")}
+<tg-emoji emoji-id='5832251986635920010'>💎</tg-emoji> Crypto: {data.get("coin")}
+<tg-emoji emoji-id='5992430854909989581'>💰</tg-emoji> Quantity: {data.get("amount")}$
+<tg-emoji emoji-id='5987917196469213507'>🔗</tg-emoji> Chain: {data.get("chain")}
+<tg-emoji emoji-id='5926783847453692661'>🏦</tg-emoji> Funds Source: {data.get("funds_source")}
+<tg-emoji emoji-id='5974217466270716579'>📈</tg-emoji> Rate: {data.get("rate")}
+<tg-emoji emoji-id='5967548335542767952'>💳</tg-emoji> Payment Method: {data.get("payment_method")}
 
-👤 DM: @{username}
-🔒 Escrow: {IN_AD_ESCROW_USERNAME}"""
+<tg-emoji emoji-id='5886412370347036129'>👤</tg-emoji> DM: @{username}
+<tg-emoji emoji-id='6034962180875490251'>⚖️</tg-emoji> Escrow: {IN_AD_ESCROW_USERNAME}"""
 
 
 def ad_published(ref_code: str) -> str:
@@ -171,39 +174,39 @@ Account is currently locked."""
 
 
 def wallet(balance: Decimal) -> str:
-    return f"""💰 Your Wallet Balance
+    return f"""<tg-emoji emoji-id='5444856076954520455'>🧾</tg-emoji> Your Wallet Balance
 
-💵 Available: ${balance:.2f} USD
+<tg-emoji emoji-id='5287231198098117669'>💰</tg-emoji> Available: ${balance:.2f} USD
 
-You can deposit funds to use later or withdraw your funds at any time ⚡"""
+You can deposit funds to use later or withdraw your funds at any time"""
 
 
 def my_stats(username: str, member_since: str, ads: int, sells: int, volume: Decimal) -> str:
-    return f"""📊 @{username} Statistics ⚡
+    return f"""<tg-emoji emoji-id='5913702317667913862'>📊</tg-emoji> @{username} Statistics
 
-⚡ Member Since: {member_since}
-⚡ P2P Ads Posted: {ads}
-⚡ Safe Sells Completed: {sells}
-⚡ Total Safe Sell Volume: ${volume:.2f}
+<tg-emoji emoji-id='5936130851635990622'>▪️</tg-emoji> Member Since: {member_since}
+<tg-emoji emoji-id='5936130851635990622'>▪️</tg-emoji> P2P Ads Posted: {ads}
+<tg-emoji emoji-id='5936130851635990622'>▪️</tg-emoji> Safe Sells Completed: {sells}
+<tg-emoji emoji-id='5936130851635990622'>▪️</tg-emoji> Total Safe Sell Volume: ${volume:.2f}
 
-Use {BOT_USERNAME} for SAFE-SELL ⚡"""
+Use {BOT_USERNAME} for SAFE-SELL <tg-emoji emoji-id='5408892168301466942'>🔥</tg-emoji>"""
 
 
 def global_stats(total: Decimal, today: Decimal, deals: int) -> str:
-    return f"""📊 Global Stats Of {BOT_USERNAME} ⚡
+    return f"""<tg-emoji emoji-id='5913702317667913862'>📊</tg-emoji> Global Stats Of {BOT_USERNAME}
 
-💸 Total SAFE-SOLD Amount:
+<tg-emoji emoji-id='5987880246865565644'>💰</tg-emoji> Total SAFE-SOLD Amount:
 ${total:,.2f}
 
-🗓 Today's SAFE-SOLD Amount:
+<tg-emoji emoji-id='5217604963571621845'>📅</tg-emoji> Today's SAFE-SOLD Amount:
 ${today:,.2f}
 
-💧 Total SAFE-SOLD Deals
+<tg-emoji emoji-id='5408892168301466942'>🔥</tg-emoji> Total SAFE-SOLD Deals
 Completed:
 {deals}
 
-💬 Always use {BOT_USERNAME} to get safest INR₹ in exchange! ⚡
-💧 This Data shows how much crypto users have SOLD US!"""
+<tg-emoji emoji-id='5877485980901971030'>💎</tg-emoji> Always use {BOT_USERNAME} to get safest INR₹ in exchange!
+<tg-emoji emoji-id='5409099658171537510'>📊</tg-emoji> This Data shows how much crypto users have SOLD US!"""
 
 
 WITHDRAW_AMOUNT = "💵 Enter withdrawal amount in USD ⚡:"
