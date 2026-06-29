@@ -4,6 +4,7 @@ from decimal import Decimal
 
 from aiogram import F, Router
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
+from aiogram.enums import ParseMode
 from aiogram.filters import Command
 from aiogram.enums import MessageEntityType
 from aiogram.types import CallbackQuery, Message, MessageEntity
@@ -122,7 +123,10 @@ async def admin_stats(message: Message) -> None:
             session.add(stats)
             await session.flush()
         await reset_today_if_needed(session, stats, settings().timezone)
-        await message.answer(msg.global_stats(stats.total_safe_sold_amount, stats.today_safe_sold_amount, stats.total_deals_completed))
+        await message.answer(
+            msg.global_stats(stats.total_safe_sold_amount, stats.today_safe_sold_amount, stats.total_deals_completed),
+            parse_mode=ParseMode.HTML,
+        )
 
 
 @router.message(Command("mode"))

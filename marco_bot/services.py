@@ -299,6 +299,7 @@ async def send_brand_message(
     user_id: int | None = None,
     parse_mode: str | None = None,
 ) -> Message:
+    resolved_parse_mode = parse_mode or ("HTML" if "<tg-emoji" in text else None)
     if session is not None and user_id is not None:
         await delete_active_menu_message(session, bot, user_id)
     if settings.banner_image_path:
@@ -307,7 +308,7 @@ async def send_brand_message(
             photo=FSInputFile(settings.banner_image_path),
             caption=text,
             reply_markup=reply_markup,
-            parse_mode=parse_mode,
+            parse_mode=resolved_parse_mode,
         )
     else:
         message = await bot.send_photo(
@@ -315,7 +316,7 @@ async def send_brand_message(
             photo=brand_banner_file(),
             caption=text,
             reply_markup=reply_markup,
-            parse_mode=parse_mode,
+            parse_mode=resolved_parse_mode,
         )
     if session is not None and user_id is not None:
         bot_session = await get_or_create_session(session, user_id)
@@ -335,13 +336,14 @@ async def send_tracked_menu_photo(
     reply_markup=None,
     parse_mode: str | None = None,
 ) -> Message:
+    resolved_parse_mode = parse_mode or ("HTML" if "<tg-emoji" in caption else None)
     await delete_active_menu_message(session, bot, user_id)
     message = await bot.send_photo(
         chat_id=chat_id,
         photo=photo,
         caption=caption,
         reply_markup=reply_markup,
-        parse_mode=parse_mode,
+        parse_mode=resolved_parse_mode,
     )
     bot_session = await get_or_create_session(session, user_id)
     data = session_data(bot_session)
@@ -359,12 +361,13 @@ async def send_tracked_menu_message(
     reply_markup=None,
     parse_mode: str | None = None,
 ) -> Message:
+    resolved_parse_mode = parse_mode or ("HTML" if "<tg-emoji" in text else None)
     await delete_active_menu_message(session, bot, user_id)
     message = await bot.send_message(
         chat_id=chat_id,
         text=text,
         reply_markup=reply_markup,
-        parse_mode=parse_mode,
+        parse_mode=resolved_parse_mode,
     )
     bot_session = await get_or_create_session(session, user_id)
     data = session_data(bot_session)
