@@ -168,23 +168,29 @@ async def text_message(message: Message) -> None:
 
     if is_global_stats(text):
         await show_global_stats(message)
+        await delete_user_message(message)
         return
 
     if locked and is_locked_entry(text):
         await show_locked_for_text(message, text, user)
+        await delete_user_message(message)
         return
 
     if is_post_ad(text):
         await enter_post_ad(message, user)
+        await delete_user_message(message)
         return
     if text == c.SAFE_SELL_BUTTON:
         await enter_safe_sell(message, user)
+        await delete_user_message(message)
         return
     if text == c.WALLET_BUTTON:
         await open_wallet(message, user)
+        await delete_user_message(message)
         return
     if text == c.MY_STATS_BUTTON:
         await show_my_stats(message, user)
+        await delete_user_message(message)
         return
 
     if state == states.CAPTCHA:
@@ -203,6 +209,13 @@ async def text_message(message: Message) -> None:
         await handle_withdraw_destination(message, user, text)
     else:
         await send_welcome(message, user)
+
+
+async def delete_user_message(message: Message) -> None:
+    try:
+        await message.delete()
+    except (TelegramBadRequest, TelegramForbiddenError):
+        pass
 
 
 @router.callback_query()
