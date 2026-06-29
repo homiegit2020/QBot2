@@ -110,11 +110,11 @@ Ref: {ref_code}
 Use {BOT_USERNAME} for SAFE-SELL ⚡"""
 
 
-SAFE_SELL_LANDING = """Welcome to MARCO P2P Bot 👋⚡️
+SAFE_SELL_LANDING = f"""Welcome to MARCO P2P Bot {premium_emoji('5994297722574737553', '💬')}
 
-SAFE SELL — A trusted platform to Sell Crypto Instantly and receive SAFE & GUARANTEED INR ₹ directly.
+{premium_emoji('5197434882321567830', '💵')} SAFE SELL — A trusted platform to Sell Crypto {premium_emoji('4911320645146510335', '🔥')} Instantly and receive SAFE & GUARANTEED {premium_emoji('5832546462478635761', '🔒')} INR ₹ directly.
 
-Choose an option below to get started 👇"""
+Choose an option below to get started {premium_emoji('6105102145030199285', '👇')}"""
 
 SAFE_SELL_BANNER = """✔ Instant Payments ⚡
 ✔ Verified & Guaranteed Funds
