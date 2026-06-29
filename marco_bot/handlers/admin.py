@@ -5,7 +5,8 @@ from decimal import Decimal
 from aiogram import F, Router
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 from aiogram.filters import Command
-from aiogram.types import CallbackQuery, Message
+from aiogram.enums import MessageEntityType
+from aiogram.types import CallbackQuery, Message, MessageEntity
 from sqlalchemy import select
 
 from .. import keyboards as kb
@@ -34,6 +35,28 @@ def is_admin(user_id: int) -> bool:
     return user_id in settings().admin_ids
 
 
+def _custom_emoji_ids(entities: list[MessageEntity] | None) -> list[str]:
+    ids: list[str] = []
+    for entity in entities or []:
+        if entity.type == MessageEntityType.CUSTOM_EMOJI and entity.custom_emoji_id:
+            ids.append(entity.custom_emoji_id)
+    return ids
+
+
+def extract_custom_emoji_ids(message: Message) -> list[str]:
+    ids: list[str] = []
+    ids.extend(_custom_emoji_ids(message.entities))
+    ids.extend(_custom_emoji_ids(message.caption_entities))
+    if message.reply_to_message:
+        ids.extend(_custom_emoji_ids(message.reply_to_message.entities))
+        ids.extend(_custom_emoji_ids(message.reply_to_message.caption_entities))
+    unique_ids: list[str] = []
+    for emoji_id in ids:
+        if emoji_id not in unique_ids:
+            unique_ids.append(emoji_id)
+    return unique_ids
+
+
 @router.message(Command("admin"))
 async def admin_help(message: Message) -> None:
     if not message.from_user or not is_admin(message.from_user.id):
@@ -46,8 +69,25 @@ async def admin_help(message: Message) -> None:
 /mode UPI on|off - toggle payment mode
 /rates - show exchange tiers
 /setrate UPI 10 600 94.0 - add/update a tier
+/emojiids - extract premium custom emoji IDs from a message or reply
 /broadcast message text - send to all users"""
     )
+
+
+@router.message(Command("emojiids"))
+async def emoji_ids(message: Message) -> None:
+    if not message.from_user or not is_admin(message.from_user.id):
+        return
+    emoji_ids = extract_custom_emoji_ids(message)
+    if not emoji_ids:
+        await message.answer(
+            "Send /emojiids as a reply to a message that contains premium emojis, or include the premium emojis in the same message."
+        )
+        return
+    lines = ["Custom emoji IDs:"]
+    for emoji_id in emoji_ids:
+        lines.append(emoji_id)
+    await message.answer("\n".join(lines))
 
 
 @router.message(Command("pending"))

@@ -83,7 +83,10 @@ If an address is missing, users will see a visible `CONFIGURE_TOKEN_CHAIN_ADDRES
 /setrate UPI 10 600 94.0
 /setrate UPI 5001 + 97.0
 /broadcast message text
+/emojiids
 ```
+
+Use `/emojiids` on a message or reply that contains premium/custom emojis to print the Telegram custom emoji IDs needed for `<tg-emoji emoji-id="...">` rendering.
 
 Admin approval buttons are attached to every pending screenshot/withdrawal submission:
 
