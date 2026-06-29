@@ -475,7 +475,7 @@ async def set_ad_method(callback: CallbackQuery, user: User, method: str) -> Non
         data = session_data(bot_session)
         await delete_callback_message(callback)
         await callback.answer()
-        await send_tracked_menu_message(session, callback.message.bot, user.user_id, callback.message.chat.id, msg.ad_text(data, public_username(user), preview=True), reply_markup=kb.ad_preview())
+        await send_tracked_menu_message(session, callback.message.bot, user.user_id, callback.message.chat.id, msg.ad_text(data, public_username(user), preview=True), reply_markup=kb.ad_preview(), parse_mode=ParseMode.HTML)
 
 
 async def revise_ad(callback: CallbackQuery, user: User) -> None:
@@ -832,7 +832,7 @@ async def render_state(message: Message, user: User, state: str) -> None:
         elif state == states.AD_PAYMENT_METHOD:
             await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.PAYMENT_METHOD, reply_markup=kb.payment_methods())
         elif state == states.AD_PREVIEW:
-            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.ad_text(data, public_username(user), preview=True), reply_markup=kb.ad_preview())
+            await send_tracked_menu_message(session, message.bot, user.user_id, message.chat.id, msg.ad_text(data, public_username(user), preview=True), reply_markup=kb.ad_preview(), parse_mode=ParseMode.HTML)
         elif state == states.EXPRESS_LANDING:
             await send_tracked_menu_photo(session, message.bot, user.user_id, message.chat.id, safe_sell_banner_file(), msg.SAFE_SELL_LANDING, reply_markup=kb.express_landing(user.wallet_balance, settings().support_url))
         elif state == states.EXPRESS_PAYMENT_MODE:
