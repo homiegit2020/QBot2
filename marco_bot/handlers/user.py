@@ -328,7 +328,7 @@ async def enter_post_ad(message: Message, user: User) -> None:
     async with session_scope() as session:
         user = await session.get(User, user.user_id)
         assert user is not None
-        if user.post_ad_cooldown_until and user.post_ad_cooldown_until > datetime.utcnow():
+        if user.post_ad_cooldown_until and user.post_ad_cooldown_until > datetime.utcnow() and user.user_id not in settings().admin_ids:
             await send_tracked_menu_message(
                 session,
                 message.bot,
