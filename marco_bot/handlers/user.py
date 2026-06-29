@@ -535,6 +535,7 @@ async def post_public_ad(callback: CallbackQuery, ad: Ad, data: dict, username: 
                 text,
                 reply_markup=markup,
                 reply_to_message_id=6,
+                parse_mode=ParseMode.HTML,
             )
             ad.channel_msg_id = sent.message_id
         except (TelegramBadRequest, TelegramForbiddenError) as exc:
