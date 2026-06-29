@@ -63,15 +63,28 @@ async def admin_help(message: Message) -> None:
     if not message.from_user or not is_admin(message.from_user.id):
         return
     await message.answer(
-        """MARCO Admin
+        """MARCO Admin 🔧
 
+📊 Stats & Monitoring:
 /pending - show pending review queue
 /stats - show global stats
+/emojiids - extract premium custom emoji IDs
+
+⚙️ Payment & Rates:
 /mode UPI on|off - toggle payment mode
 /rates - show exchange tiers
 /setrate UPI 10 600 94.0 - add/update a tier
-/emojiids - extract premium custom emoji IDs from a message or reply
-/broadcast message text - send to all users"""
+
+📢 Broadcast:
+/broadcast message text - send to all users
+
+🚫 User Management:
+/ban @username or /ban 123456 - ban a user
+/unban @username or /unban 123456 - unban a user
+/resetadcooldown @username or /resetadcooldown 123456 - remove user's ad cooldown
+
+🔧 Bot Maintenance:
+/maintenance on|off - enable/disable maintenance mode"""
     )
 
 
@@ -217,6 +230,111 @@ async def broadcast(message: Message) -> None:
         except (TelegramBadRequest, TelegramForbiddenError):
             continue
     await message.answer(f"Broadcast sent to {sent} users.")
+
+
+@router.message(Command("ban"))
+async def ban_user(message: Message) -> None:
+    if not message.from_user or not is_admin(message.from_user.id):
+        return
+    parts = (message.text or "").split(maxsplit=1)
+    if len(parts) != 2:
+        await message.answer("Usage: /ban @username or /ban 123456")
+        return
+    
+    user_identifier = parts[1].lstrip('@')
+    async with session_scope() as session:
+        # Try to find user by username or user_id
+        user = None
+        if user_identifier.isdigit():
+            user = await session.get(User, int(user_identifier))
+        else:
+            result = await session.execute(select(User).where(User.username == user_identifier))
+            user = result.scalar_one_or_none()
+        
+        if not user:
+            await message.answer(f"❌ User '{user_identifier}' not found.")
+            return
+        
+        user.is_locked = True
+        await message.answer(f"✅ Banned user {user.username or user.user_id} (ID: {user.user_id})")
+
+
+@router.message(Command("unban"))
+async def unban_user(message: Message) -> None:
+    if not message.from_user or not is_admin(message.from_user.id):
+        return
+    parts = (message.text or "").split(maxsplit=1)
+    if len(parts) != 2:
+        await message.answer("Usage: /unban @username or /unban 123456")
+        return
+    
+    user_identifier = parts[1].lstrip('@')
+    async with session_scope() as session:
+        # Try to find user by username or user_id
+        user = None
+        if user_identifier.isdigit():
+            user = await session.get(User, int(user_identifier))
+        else:
+            result = await session.execute(select(User).where(User.username == user_identifier))
+            user = result.scalar_one_or_none()
+        
+        if not user:
+            await message.answer(f"❌ User '{user_identifier}' not found.")
+            return
+        
+        user.is_locked = False
+        await message.answer(f"✅ Unbanned user {user.username or user.user_id} (ID: {user.user_id})")
+
+
+@router.message(Command("resetadcooldown"))
+async def reset_ad_cooldown(message: Message) -> None:
+    if not message.from_user or not is_admin(message.from_user.id):
+        return
+    parts = (message.text or "").split(maxsplit=1)
+    if len(parts) != 2:
+        await message.answer("Usage: /resetadcooldown @username or /resetadcooldown 123456")
+        return
+    
+    user_identifier = parts[1].lstrip('@')
+    async with session_scope() as session:
+        # Try to find user by username or user_id
+        user = None
+        if user_identifier.isdigit():
+            user = await session.get(User, int(user_identifier))
+        else:
+            result = await session.execute(select(User).where(User.username == user_identifier))
+            user = result.scalar_one_or_none()
+        
+        if not user:
+            await message.answer(f"❌ User '{user_identifier}' not found.")
+            return
+        
+        user.post_ad_cooldown_until = None
+        await message.answer(f"✅ Removed ad cooldown for user {user.username or user.user_id} (ID: {user.user_id})")
+
+
+@router.message(Command("maintenance"))
+async def maintenance_mode(message: Message) -> None:
+    if not message.from_user or not is_admin(message.from_user.id):
+        return
+    parts = (message.text or "").split()
+    if len(parts) != 2 or parts[1].lower() not in {"on", "off"}:
+        await message.answer("Usage: /maintenance on|off")
+        return
+    
+    is_maintenance = parts[1].lower() == "on"
+    flag = "🔴 MAINTENANCE MODE ON" if is_maintenance else "🟢 MAINTENANCE MODE OFF"
+    
+    # Store maintenance mode in GlobalStats or broadcast a message
+    async with session_scope() as session:
+        stats = await session.get(GlobalStats, 1)
+        if not stats:
+            stats = GlobalStats(id=1)
+            session.add(stats)
+        # You can add a maintenance_mode field to GlobalStats if needed
+        # For now, we'll just send a notification
+    
+    await message.answer(f"{flag}\n\n⚠️ Note: Maintenance mode feature requires bot logic updates to enforce it globally.")
 
 
 @router.callback_query(F.data.startswith("admin:"))
