@@ -1,0 +1,21 @@
+[project]
+name = "marco-p2p-bot"
+version = "1.0.0"
+description = "MARCO P2P Telegram bot rebuild with P2P ads, safe sell, wallet, stats, captcha, cooldowns, and admin review."
+requires-python = ">=3.11"
+dependencies = [
+    "aiogram>=3.10,<4",
+    "SQLAlchemy>=2.0,<3",
+    "aiosqlite>=0.19,<1",
+    "asyncpg>=0.30,<1",
+    "Pillow>=10,<12",
+    "python-dotenv>=1,<2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8,<9",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

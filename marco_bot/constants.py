@@ -1,0 +1,46 @@
+from __future__ import annotations
+
+BOT_USERNAME = "@MARCO_P2PBot"
+ADS_CHANNEL_USERNAME = "@MARCO_P2P"
+ESCROW_BOT_USERNAME = "@MARCO_EscrowBot"
+ESCROW_CHAT_USERNAME = "@MARCO_Escrow_Chat"
+UPDATES_USERNAME = "@MARCO_Updates"
+IN_AD_ESCROW_USERNAME = "@MARCO_Escrow"
+
+POST_AD_BUTTON = "POST AD"
+SAFE_SELL_BUTTON = "SAFE SELL [EXPRESS]"
+WALLET_BUTTON = "WALLET💰"
+MY_STATS_BUTTON = "📊 My Stats"
+GLOBAL_STATS_BUTTON = "📈 Global Stats"
+
+BACK_TO_MENU_BUTTON = "⬅️ Back to Menu"
+BACK_BUTTON = "⬅️ Back"
+BACK_PLAIN_BUTTON = "🔙 BACK"
+
+AD_COINS = ["USDT", "BTC", "SOL", "ETH", "USDC"]
+EXPRESS_TOKENS = ["BTC", "ETH", "USDT"]
+
+USDT_CHAINS = ["BEP20", "TRC20", "ERC20", "Polygon", "SOL", "BASE", "ARBITRUM", "OPTIMISM"]
+EXPRESS_USDT_CHAINS = ["BEP20", "ERC20", "MATIC", "TRC20"]
+DEFAULT_CHAINS = ["BEP20", "ERC20", "MATIC", "TRC20"]
+BTC_CHAINS = ["BTC", "BEP20", "ERC20"]
+ETH_CHAINS = ["ERC20", "BEP20", "BASE", "ARBITRUM", "OPTIMISM"]
+SOL_CHAINS = ["SOL", "BEP20"]
+
+FUNDS_SOURCES = ["Legit", "Layer2", "Stock", "Gaming", "Mix"]
+PAYMENT_METHODS = ["UPI/IMPS", "CDM", "Cardless", "IMPS/RTGS"]
+EXPRESS_PAYMENT_MODES = ["UPI", "IMPS", "CDM"]
+
+AD_RATE_BANDS = {
+    "Legit": (94.0, 102.0),
+    "Layer2": (94.0, 102.0),
+    "Stock": (94.0, 102.0),
+    "Gaming": (94.0, 102.0),
+    "Mix": (94.0, 102.0),
+}
+
+DEFAULT_RATE_TIERS = {
+    "UPI": [(10, 600, 94.0), (601, 2000, 95.0), (2001, 5000, 96.0), (5001, None, 97.0)],
+    "IMPS": [(10, 600, 94.0), (601, 2000, 95.0), (2001, 5000, 96.0), (5001, None, 97.0)],
+    "CDM": [(10, 600, 94.0), (601, 2000, 95.0), (2001, 5000, 96.0), (5001, None, 97.0)],
+}
