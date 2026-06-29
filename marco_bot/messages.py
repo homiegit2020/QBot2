@@ -89,7 +89,7 @@ def ad_text(data: dict, username: str, preview: bool = True) -> str:
 def ad_published(ref_code: str) -> str:
     return f"""🚀 Ad Published Successfully! 🔥
 
-Your ad is now live in the Channel and Group.
+Your ad is now live in the channel post.
 Ref: {ref_code}
 
 Use {BOT_USERNAME} for SAFE-SELL ⚡"""

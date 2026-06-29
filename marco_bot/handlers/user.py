@@ -466,16 +466,15 @@ async def post_public_ad(callback: CallbackQuery, ad: Ad, data: dict, username: 
     failures: list[str] = []
     if settings().ads_channel_id:
         try:
-            sent = await callback.bot.send_message(settings().ads_channel_id, text, reply_markup=markup)
+            sent = await callback.bot.send_message(
+                settings().ads_channel_id,
+                text,
+                reply_markup=markup,
+                reply_to_message_id=6,
+            )
             ad.channel_msg_id = sent.message_id
         except (TelegramBadRequest, TelegramForbiddenError) as exc:
             failures.append(f"channel: {exc}")
-    if settings().ads_group_id:
-        try:
-            sent = await callback.bot.send_message(settings().ads_group_id, text, reply_markup=markup)
-            ad.group_msg_id = sent.message_id
-        except (TelegramBadRequest, TelegramForbiddenError) as exc:
-            failures.append(f"group: {exc}")
     if failures:
         await callback.message.answer("Ad was saved, but public posting needs admin attention: " + "; ".join(failures))
 
