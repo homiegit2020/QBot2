@@ -1,0 +1,9 @@
+aiogram<4,>=3.10
+SQLAlchemy<3,>=2.0
+aiosqlite<1,>=0.19
+asyncpg<1,>=0.30
+Pillow<12,>=10
+python-dotenv<2,>=1
+
+[dev]
+pytest<9,>=8

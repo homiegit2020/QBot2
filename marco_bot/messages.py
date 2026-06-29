@@ -52,7 +52,7 @@ def premium_emoji(emoji_id: str, fallback: str) -> str:
     return f'<tg-emoji emoji-id="{emoji_id}">{fallback}</tg-emoji>'
 
 
-OBJECTIVE = f"{premium_emoji('5240086656349913841', '🤑')} What would you like to do?"
+OBJECTIVE = f"{premium_emoji('5951665890079544884', '✅')} What would you like to do?"
 COIN_SELECT = f"{premium_emoji('5778311685638984859', '🪙')} Choose Your Coin:"
 
 
