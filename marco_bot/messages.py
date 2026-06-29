@@ -22,11 +22,9 @@ Escrow : {ESCROW_BOT_USERNAME}
 Chat : {ESCROW_CHAT_USERNAME}
 Updates : {UPDATES_USERNAME}"""
 
-WELCOME = """<tg-emoji emoji-id="5994297722574737553">💬</tg-emoji> Welcome to MARCO P2P Bot
+WELCOME = """<tg-emoji emoji-id="5958376256788502078">🙏</tg-emoji> Welcome To MARCO P2P Bot <tg-emoji emoji-id="5220166546491459639">🔥</tg-emoji>, where you can Sell & Buy Crypto Easily <tg-emoji emoji-id="5408892168301466942">⚡</tg-emoji>
 
-<tg-emoji emoji-id="5197434882321567830">💵</tg-emoji> SAFE SELL — A trusted platform to Sell Crypto <tg-emoji emoji-id="4911320645146510335">🔥</tg-emoji> Instantly and receive SAFE & GUARANTEED INR ₹ directly <tg-emoji emoji-id="5832546462478635761">🔒</tg-emoji>
-
-Choose an option below to get started <tg-emoji emoji-id="6105102145030199285">👇</tg-emoji>"""
+What is your objective?"""
 
 GROUP_GATE = """❌ Access Denied 🔒
 
@@ -104,7 +102,11 @@ Ref: {ref_code}
 Use {BOT_USERNAME} for SAFE-SELL ⚡"""
 
 
-SAFE_SELL_LANDING = WELCOME
+SAFE_SELL_LANDING = """Welcome to MARCO P2P Bot 👋⚡️
+
+SAFE SELL — A trusted platform to Sell Crypto Instantly and receive SAFE & GUARANTEED INR ₹ directly.
+
+Choose an option below to get started 👇"""
 
 SAFE_SELL_BANNER = """✔ Instant Payments ⚡
 ✔ Verified & Guaranteed Funds
