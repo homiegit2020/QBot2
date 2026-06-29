@@ -74,7 +74,7 @@ async def admin_help(message: Message) -> None:
     )
 
 
-@router.message(Command("emojiids"))
+@router.message(Command(commands=["emojiids", "emojiiids"]))
 async def emoji_ids(message: Message) -> None:
     if not message.from_user or not is_admin(message.from_user.id):
         return
