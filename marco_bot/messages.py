@@ -153,7 +153,15 @@ Select Your Crypto {premium_emoji('5242625806655570503', '🤑')} Token {premium
 
 
 def express_chain_select(token: str) -> str:
-    return f"Select Network Chain for {token} ⚡:"
+    token_emojis = {
+        "USDT": "5359437015752401733",
+        "BTC": "5359584650958226302",
+        "ETH": "5359321266383766546",
+        "SOL": "4915861533679944766",
+        "USDC": "5240086656349913841",
+    }
+    emoji_id = token_emojis.get(token, "5359321266383766546")
+    return f"{premium_emoji('5411246291416013236', '🔗')} Select Network Chain for {token} {premium_emoji(emoji_id, '📱')}"
 
 
 def deposit_instructions(token: str, chain: str, address: str) -> str:
