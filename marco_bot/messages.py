@@ -165,15 +165,15 @@ def express_chain_select(token: str) -> str:
 
 
 def deposit_instructions(token: str, chain: str, address: str) -> str:
-    return f"""💎 Token: {token}
-🔗 Network: {chain}
+    return f"""{premium_emoji('5242551409232069476', '🤑')} Token: {token}
+{premium_emoji('5877465816030515018', '🔗')} Network: {chain}
 
-Pay on the address below 👇:
+Pay on the address below {premium_emoji('6339166816006312740', '👇')}:
 {address}
 
-⚠ Note: Send exact amount or more. Any extra will be added to your wallet balance.
+{premium_emoji('5447644880824181073', '⚠️')} Note: Send exact amount or more. Any extra will be added to your wallet balance.
 
-After payment, click 'CHECK PAYMENT' below to send proof ⚡"""
+After payment, {premium_emoji('5877468380125990242', '➡️')} click 'CHECK PAYMENT' below to send proof {premium_emoji('6019295596173596341', '👁')}"""
 
 
 SCREENSHOT_PROMPT = "Please send a screenshot of your payment for verification 📸."
