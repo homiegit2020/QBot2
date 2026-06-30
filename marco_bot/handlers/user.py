@@ -814,6 +814,7 @@ async def show_my_stats(message: Message, user: User) -> None:
                 user.safe_sell_volume,
             ),
             reply_markup=kb.persistent_menu(user),
+            parse_mode=ParseMode.HTML,
         )
 
 
